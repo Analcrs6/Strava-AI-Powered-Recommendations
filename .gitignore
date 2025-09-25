@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+.env
+
+# OS
+.DS_Store
+
+# Data
+data/raw_activities.csv
