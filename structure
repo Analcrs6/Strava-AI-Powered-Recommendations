@@ -1,0 +1,14 @@
+strava-recommender-system/
+├── .gitignore
+├── README.md
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   └── interim/
+├── notebooks/
+├── src/
+│   ├── __init__.py
+│   └── data/
+│       └── collect_strava_data.py
+├── models/
+└── requirements.txt
