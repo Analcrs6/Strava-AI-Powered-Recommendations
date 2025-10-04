@@ -1,5 +1,5 @@
-# Capstone-project
-Capstone Project Report: AI-Powered Personalized Activity Recommendations for Strava Users
+# Strava-AI-Powered-Recommendations
+AI-Powered Personalized Activity Recommendations for Strava Users
 
 Project Lead: Anais Lacreuse and Mrudula Dama
 
@@ -24,7 +24,7 @@ To establish a performance baseline by quantitatively comparing the model's reco
 To create a functional, interactive dashboard or web application prototype to visualize the model's output and demonstrate the personalized recommendations.
 
 3. Data Sources
-The project will rely on a multi-source data strategy to build a comprehensive user and route profile.
+The project will rely on a multi-source data strategy to build a comprehensive user and route profile, will be based on a large synthetic data and multiple real data from friends.
 
 Strava API: This will be the primary data source, providing access to anonymized user activity logs. Key data points include distance, pace, elevation gain, heart rate, and GPS traces for each run or ride. Sample or synthetic user profiles will be used to ensure a sufficient volume of data for model training.
 
