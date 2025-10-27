@@ -5,11 +5,9 @@ services:
     env_file: .env
     ports:
       - "8080:8000"
-    command: uvicorn app.main:app --host ${API_HOST} --port ${API_PORT}
+    command: python -m uvicorn app.main:app --host ${API_HOST} --port ${API_PORT}
     volumes:
-      - ./app:/code/app
       - appdata:/data
-      - ./synthetic_strava_data.csv:/datasets/synthetic_strava_data.csv:ro
     depends_on: [db]
 
   db:
