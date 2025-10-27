@@ -10,6 +10,18 @@ services:
       - appdata:/data
     depends_on: [db]
 
+  frontend:
+    build: ./frontend
+    container_name: strava-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    depends_on: [app]
+
   db:
     image: postgis/postgis:16-3.4
     container_name: db

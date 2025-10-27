@@ -5,14 +5,15 @@ help:
 	@echo "Strava App - Docker Commands"
 	@echo ""
 	@echo "Setup & Run:"
-	@echo "  make build          - Build all Docker images"
+	@echo "  make build          - Build all Docker images (backend + frontend)"
 	@echo "  make up             - Start all services"
 	@echo "  make down           - Stop all services"
 	@echo "  make restart        - Restart all services"
 	@echo ""
 	@echo "Development:"
 	@echo "  make logs           - View all logs (follow mode)"
-	@echo "  make logs-app       - View app logs only"
+	@echo "  make logs-app       - View backend logs only"
+	@echo "  make logs-frontend  - View frontend logs only"
 	@echo "  make shell-app      - Open shell in app container"
 	@echo "  make shell-db       - Open psql shell in database"
 	@echo ""
@@ -20,6 +21,11 @@ help:
 	@echo "  make health         - Check health endpoint"
 	@echo "  make recommend      - Test recommendations (activity_id=1_1)"
 	@echo "  make rebuild-index  - Manually rebuild FAISS index"
+	@echo ""
+	@echo "URLs:"
+	@echo "  Frontend:  http://localhost:3000"
+	@echo "  Backend:   http://localhost:8080"
+	@echo "  API Docs:  http://localhost:8080/docs"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean          - Stop services and remove volumes"
@@ -52,6 +58,10 @@ logs:
 # View app logs only
 logs-app:
 	sudo docker compose logs -f app
+
+# View frontend logs only
+logs-frontend:
+	sudo docker compose logs -f frontend
 
 # Check health
 health:
