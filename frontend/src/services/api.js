@@ -20,9 +20,15 @@ export const activitiesAPI = {
 };
 
 export const recommendAPI = {
-  getRecommendations: (activityId, k = 10) => 
-    api.post('/recommend', { activity_id: activityId, k }),
+  getRecommendations: (activityId, k = 10, strategy = 'content_mmr', lambdaDiversity = 0.3) => 
+    api.post('/recommend', { 
+      activity_id: activityId, 
+      k,
+      strategy,
+      lambda_diversity: lambdaDiversity
+    }),
   rebuildIndex: () => api.post('/recommend/rebuild'),
+  getStrategies: () => api.get('/recommend/strategies'),
 };
 
 export const usersAPI = {

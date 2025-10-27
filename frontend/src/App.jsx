@@ -16,7 +16,7 @@ function App() {
               <Link to="/" className="flex items-center space-x-2">
                 <Activity className="h-8 w-8 text-strava-orange" />
                 <span className="text-2xl font-bold text-gray-900">
-                  Strava<span className="text-strava-orange">Clone</span>
+                  Strava<span className="text-strava-orange">Recommender</span>
                 </span>
               </Link>
               
@@ -53,10 +53,10 @@ function App() {
         <footer className="bg-white border-t border-gray-200 mt-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex justify-between items-center text-sm text-gray-600">
-              <p>Strava Clone with AI Recommender © 2025</p>
+              <p>Strava Recommender System © 2025</p>
               <div className="flex items-center space-x-2">
                 <TrendingUp className="h-4 w-4 text-strava-orange" />
-                <span>Powered by FAISS</span>
+                <span>FAISS + MMR</span>
               </div>
             </div>
           </div>

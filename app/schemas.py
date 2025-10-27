@@ -24,7 +24,9 @@ class ActivityOut(BaseModel):
 class RecommendRequest(BaseModel):
     user_id: Optional[str] = None
     activity_id: Optional[str] = None
-    k: int = 20
+    k: int = 10
+    strategy: str = "content_mmr"  # content, content_mmr, ensemble, ensemble_mmr
+    lambda_diversity: float = 0.3  # 0-1, only used for MMR strategies
 
 class RecommendItem(BaseModel):
     activity_id: str
@@ -32,4 +34,7 @@ class RecommendItem(BaseModel):
 
 class RecommendResponse(BaseModel):
     items: List[RecommendItem]
+    strategy: str
+    lambda_diversity: Optional[float] = None
+    metadata: Optional[Dict[str, Any]] = None
 

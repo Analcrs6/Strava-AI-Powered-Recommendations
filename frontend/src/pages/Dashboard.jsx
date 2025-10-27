@@ -39,7 +39,7 @@ function Dashboard() {
       <div className="bg-gradient-to-r from-strava-orange to-orange-600 rounded-2xl p-8 mb-8 text-white">
         <h1 className="text-4xl font-bold mb-2">Welcome back, Athlete! 👋</h1>
         <p className="text-lg opacity-90">
-          Track your activities and discover similar workouts with AI-powered recommendations
+          Track your activities and discover similar workouts with our recommender system
         </p>
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
