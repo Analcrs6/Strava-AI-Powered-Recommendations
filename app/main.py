@@ -1,5 +1,7 @@
+import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import OperationalError
 from .db import Base, engine
 from .routers import health, activities, recommend, users, demo
 from .services.recommender import recsys
@@ -20,9 +22,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# create tables
-Base.metadata.create_all(bind=engine)
-
 # mount routers
 app.include_router(health)
 app.include_router(users)
@@ -30,10 +29,29 @@ app.include_router(activities)
 app.include_router(recommend)
 app.include_router(demo)
 
+def init_db_with_retry(max_retries=5, retry_delay=2):
+    """Initialize database with retry logic for container startup."""
+    for attempt in range(max_retries):
+        try:
+            print(f"🗄️  Attempting to connect to database (attempt {attempt + 1}/{max_retries})...")
+            Base.metadata.create_all(bind=engine)
+            print("✅ Database tables created successfully!")
+            return
+        except OperationalError as e:
+            if attempt < max_retries - 1:
+                print(f"⚠️  Database not ready yet, retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                print(f"❌ Failed to connect to database after {max_retries} attempts")
+                raise
+
 @app.on_event("startup")
 def on_startup():
     """Initialize the application - load trained model and build FAISS index."""
     print("🚀 Starting Strava Recommender System...")
+    
+    # Initialize database tables
+    init_db_with_retry()
     
     # Initialize recommender (loads trained model if available, otherwise builds from CSV)
     print("🔨 Loading recommender...")

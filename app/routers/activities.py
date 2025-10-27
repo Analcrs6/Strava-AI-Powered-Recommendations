@@ -25,8 +25,15 @@ def create_activity(payload: ActivityCreate, db: Session = Depends(get_db)):
     return ActivityOut.model_validate(obj.__dict__)
 
 @router.get("", response_model=List[ActivityOut])
-def list_activities(skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
-    activities = db.query(models.Activity).offset(skip).limit(limit).all()
+def list_activities(skip: int = 0, limit: int = 20, include_demo: bool = False, db: Session = Depends(get_db)):
+    """List activities (excludes demo data by default)."""
+    query = db.query(models.Activity)
+    
+    # Filter out demo data unless explicitly requested
+    if not include_demo:
+        query = query.filter(models.Activity.demo_session_id == None)
+    
+    activities = query.offset(skip).limit(limit).all()
     return [ActivityOut.model_validate(a.__dict__) for a in activities]
 
 @router.get("/{activity_id}", response_model=ActivityOut)

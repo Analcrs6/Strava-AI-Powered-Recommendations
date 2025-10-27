@@ -8,7 +8,9 @@ services:
     command: python -m uvicorn app.main:app --host ${API_HOST} --port ${API_PORT}
     volumes:
       - appdata:/data
-    depends_on: [db]
+    depends_on:
+      db:
+        condition: service_healthy
 
   frontend:
     build: ./frontend
@@ -30,6 +32,11 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine

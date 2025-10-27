@@ -7,6 +7,7 @@ class User(Base):
     __tablename__ = "users"
     id = Column(String, primary_key=True)
     name = Column(String)
+    demo_session_id = Column(String, nullable=True)  # Track demo data
 
 class Activity(Base):
     __tablename__ = "activities"
@@ -19,4 +20,5 @@ class Activity(Base):
     elevation_gain_m = Column(Float, nullable=True)
     hr_avg = Column(Float, nullable=True)
     features = Column(JSONB, nullable=True)  # store raw feature dict for now
+    demo_session_id = Column(String, nullable=True)  # Track demo data
 

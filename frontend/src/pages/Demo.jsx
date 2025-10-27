@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { demoAPI, activitiesAPI } from '../services/api';
-import { Sparkles, Trash2, Users, AlertCircle, CheckCircle, Play, ArrowLeft } from 'lucide-react';
+import { demoAPI, activitiesAPI, recommendAPI } from '../services/api';
+import { Sparkles, Trash2, Users, AlertCircle, CheckCircle, Play, ArrowLeft, TrendingUp, Settings, Sliders } from 'lucide-react';
 import { formatDistance, formatDuration } from '../utils/format';
 
 function Demo() {
@@ -13,6 +13,12 @@ function Demo() {
   const [message, setMessage] = useState(null);
   const [stats, setStats] = useState(null);
   const [activities, setActivities] = useState([]);
+  const [selectedActivity, setSelectedActivity] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recLoading, setRecLoading] = useState(false);
+  const [strategy, setStrategy] = useState('content_mmr');
+  const [lambdaDiversity, setLambdaDiversity] = useState(0.3);
+  const [showRecommender, setShowRecommender] = useState(false);
 
   useEffect(() => {
     loadDemoUsers();
@@ -41,10 +47,12 @@ function Demo() {
       const response = await demoAPI.getStats();
       setStats(response.data);
       
-      // Also load activities to display
+      // Also load activities to display (include demo data)
       if (response.data.total_activities > 0) {
-        const activitiesResponse = await activitiesAPI.list(0, 20);
+        const activitiesResponse = await activitiesAPI.list(0, 50, true); // include_demo = true
         setActivities(activitiesResponse.data);
+      } else {
+        setActivities([]);
       }
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -97,6 +105,9 @@ function Demo() {
       // Refresh stats and activities
       await loadStats();
       setActivities([]);
+      setSelectedActivity(null);
+      setRecommendations([]);
+      setShowRecommender(false);
     } catch (error) {
       setMessage({
         type: 'error',
@@ -106,6 +117,55 @@ function Demo() {
       setClearing(false);
     }
   };
+
+  const handleSelectActivity = async (activity) => {
+    setSelectedActivity(activity);
+    setShowRecommender(true);
+    setRecLoading(true);
+    setRecommendations([]);
+    
+    try {
+      const response = await recommendAPI.getRecommendations(
+        activity.id,
+        10,
+        strategy,
+        lambdaDiversity
+      );
+      setRecommendations(response.data.items || []);
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
+      setRecommendations([]);
+    } finally {
+      setRecLoading(false);
+    }
+  };
+
+  // Reload recommendations when strategy or diversity changes
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      if (!selectedActivity || !showRecommender) return;
+      
+      setRecLoading(true);
+      setRecommendations([]);
+      
+      try {
+        const response = await recommendAPI.getRecommendations(
+          selectedActivity.id,
+          10,
+          strategy,
+          lambdaDiversity
+        );
+        setRecommendations(response.data.items || []);
+      } catch (error) {
+        console.error('Error loading recommendations:', error);
+        setRecommendations([]);
+      } finally {
+        setRecLoading(false);
+      }
+    };
+    
+    loadRecommendations();
+  }, [selectedActivity, showRecommender, strategy, lambdaDiversity]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -230,8 +290,9 @@ function Demo() {
             </div>
           </div>
 
-          {/* Right Column: Activities Preview */}
-          <div className="lg:col-span-2">
+          {/* Right Column: Activities & Recommender */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Activities List */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">
                 Loaded Activities {activities.length > 0 && `(${activities.length})`}
@@ -246,31 +307,175 @@ function Demo() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {activities.map((activity) => (
-                    <div
-                      key={activity.id}
-                      onClick={() => navigate(`/activities/${activity.id}`)}
-                      className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition cursor-pointer"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-semibold text-gray-900 capitalize">
-                            {activity.sport || 'Activity'}
+                <>
+                  <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-900 font-medium">💡 Click any activity to test recommendations!</p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      The recommender system will find similar activities using FAISS + MMR
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                    {activities.map((activity) => (
+                      <div
+                        key={activity.id}
+                        onClick={() => handleSelectActivity(activity)}
+                        className={`p-4 border-2 rounded-lg transition cursor-pointer ${
+                          selectedActivity?.id === activity.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-semibold text-gray-900 capitalize">
+                              {activity.sport || 'Activity'}
+                            </div>
+                            <div className="text-sm text-gray-500 mt-1">
+                              {formatDistance(activity.distance_m)} • {formatDuration(activity.duration_s)}
+                            </div>
+                            {activity.elevation_gain_m > 0 && (
+                              <div className="text-xs text-gray-400 mt-1">
+                                ↗ {Math.round(activity.elevation_gain_m)}m gain
+                              </div>
+                            )}
                           </div>
-                          <div className="text-sm text-gray-500 mt-1">
-                            {formatDistance(activity.distance_m)} • {formatDuration(activity.duration_s)}
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {activity.user_id}
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
+
+            {/* Recommender System Panel */}
+            {showRecommender && selectedActivity && (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="h-6 w-6 text-blue-600" />
+                    <h2 className="text-xl font-bold text-gray-900">Recommendations</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowRecommender(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Selected Activity Info */}
+                <div className="mb-4 p-4 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg">
+                  <div className="text-sm opacity-90 mb-1">Finding similar activities to:</div>
+                  <div className="font-bold capitalize text-lg">{selectedActivity.sport}</div>
+                  <div className="text-sm opacity-90 mt-1">
+                    {formatDistance(selectedActivity.distance_m)} • {formatDuration(selectedActivity.duration_s)}
+                    {selectedActivity.elevation_gain_m > 0 && ` • ↗ ${Math.round(selectedActivity.elevation_gain_m)}m`}
+                  </div>
+                </div>
+
+                {/* Strategy & Diversity Controls */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Settings className="h-4 w-4 inline mr-1" />
+                      Strategy
+                    </label>
+                    <select
+                      value={strategy}
+                      onChange={(e) => setStrategy(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="content">Pure Similarity (Fast)</option>
+                      <option value="content_mmr">⭐ Content + Diversity (Recommended)</option>
+                      <option value="ensemble">Ensemble (Future)</option>
+                      <option value="ensemble_mmr">Ensemble + Diversity (Future)</option>
+                    </select>
+                  </div>
+
+                  {strategy.includes('mmr') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <Sliders className="h-4 w-4 inline mr-1" />
+                        Diversity: {lambdaDiversity.toFixed(1)}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={lambdaDiversity}
+                        onChange={(e) => setLambdaDiversity(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>Relevance</span>
+                        <span>Balanced</span>
+                        <span>Variety</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Recommendations List */}
+                {recLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : recommendations.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                    <p>No recommendations found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-700 mb-2">
+                      Top {recommendations.length} Similar Activities:
+                    </div>
+                    {recommendations.map((rec, index) => (
+                      <div
+                        key={rec.activity_id}
+                        className="p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <span className="flex items-center justify-center w-7 h-7 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-bold rounded-full">
+                              {index + 1}
+                            </span>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {rec.activity_id}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                Match Score: {(rec.score * 100).toFixed(1)}%
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="w-24 bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all"
+                                style={{ width: `${rec.score * 100}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Footer Info */}
+                <div className="mt-6 pt-4 border-t border-gray-100">
+                  <div className="flex items-center space-x-2 text-xs text-gray-500">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>
+                      Using FAISS vector search
+                      {strategy.includes('mmr') && ` + MMR reranking (λ=${lambdaDiversity})`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

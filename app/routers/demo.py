@@ -1,14 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 import pandas as pd
+import uuid
+from datetime import datetime
 from ..db import get_db
 from .. import models
 from ..config import settings
 from ..services.recommender import recsys
 
 router = APIRouter(prefix="/demo", tags=["demo"])
+
+# Store current demo session ID (in production, use Redis or similar)
+CURRENT_DEMO_SESSION = None
 
 def check_demo_enabled():
     """Check if demo mode is enabled."""
@@ -17,6 +22,18 @@ def check_demo_enabled():
             status_code=403, 
             detail="Demo mode is disabled. Set DEMO_MODE_ENABLED=true to enable it."
         )
+
+def get_or_create_demo_session():
+    """Get or create a demo session ID."""
+    global CURRENT_DEMO_SESSION
+    if not CURRENT_DEMO_SESSION:
+        CURRENT_DEMO_SESSION = f"demo_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}"
+    return CURRENT_DEMO_SESSION
+
+def clear_demo_session():
+    """Clear the current demo session."""
+    global CURRENT_DEMO_SESSION
+    CURRENT_DEMO_SESSION = None
 
 
 class UserInfo(BaseModel):
@@ -35,6 +52,14 @@ class DemoLoadResponse(BaseModel):
     user_id: str
     activities_loaded: int
     message: str
+    session_id: str
+
+
+class DemoSessionResponse(BaseModel):
+    session_id: Optional[str]
+    active: bool
+    users_count: int
+    activities_count: int
 
 
 @router.get("/users", response_model=List[UserInfo])
@@ -104,15 +129,43 @@ def get_demo_users():
         raise HTTPException(500, f"Failed to load demo users: {str(e)}")
 
 
+@router.get("/session", response_model=DemoSessionResponse)
+def get_demo_session(db: Session = Depends(get_db)):
+    """Get current demo session info."""
+    check_demo_enabled()
+    session_id = CURRENT_DEMO_SESSION
+    
+    if session_id:
+        users_count = db.query(models.User).filter(models.User.demo_session_id == session_id).count()
+        activities_count = db.query(models.Activity).filter(models.Activity.demo_session_id == session_id).count()
+        return DemoSessionResponse(
+            session_id=session_id,
+            active=True,
+            users_count=users_count,
+            activities_count=activities_count
+        )
+    else:
+        return DemoSessionResponse(
+            session_id=None,
+            active=False,
+            users_count=0,
+            activities_count=0
+        )
+
+
 @router.post("/load", response_model=DemoLoadResponse)
 def load_demo_data(req: DemoLoadRequest, db: Session = Depends(get_db)):
     """
-    Load activities for a specific user from CSV into the database for demo.
+    Load activities for a specific user from CSV into a temporary demo session.
     
-    This populates the database with real activities from the CSV,
-    allowing you to test recommendations with actual user data.
+    This creates isolated demo data that won't affect production data.
+    Demo data is automatically tagged with a session ID.
     """
     check_demo_enabled()
+    
+    # Get or create demo session
+    session_id = get_or_create_demo_session()
+    
     try:
         # Load CSV
         df = pd.read_csv(settings.csv_seed_path)
@@ -144,19 +197,28 @@ def load_demo_data(req: DemoLoadRequest, db: Session = Depends(get_db)):
         
         user_df = user_df.fillna(0.0)
         
-        # Create user if doesn't exist
-        existing_user = db.get(models.User, req.user_id)
+        # Create demo user with session ID
+        demo_user_id = f"{req.user_id}_demo_{session_id}"
+        existing_user = db.get(models.User, demo_user_id)
         if not existing_user:
-            user = models.User(id=req.user_id, name=f"Demo User {req.user_id}")
+            user = models.User(
+                id=demo_user_id,
+                name=f"Demo: {req.user_id}",
+                demo_session_id=session_id
+            )
             db.add(user)
         
-        # Load activities
+        # Load activities into demo session
         activities_loaded = 0
         for _, row in user_df.iterrows():
-            activity_id = str(row['id'])
+            # Create demo activity ID with session
+            original_id = str(row['id'])
+            demo_activity_id = f"{original_id}_demo_{session_id}"
             
-            # Check if activity already exists
-            existing = db.get(models.Activity, activity_id)
+            # Check if activity already exists in this demo session
+            existing = db.query(models.Activity).filter(
+                models.Activity.id == demo_activity_id
+            ).first()
             if existing:
                 continue
             
@@ -169,18 +231,25 @@ def load_demo_data(req: DemoLoadRequest, db: Session = Depends(get_db)):
                 elif "road" in surface:
                     sport = "cycling" if row.get("distance_m", 0) > 15000 else "running"
             
-            activity = models.Activity(
-                id=activity_id,
-                user_id=req.user_id,
-                sport=sport,
-                distance_m=float(row['distance_m']),
-                duration_s=float(row['duration_s']),
-                elevation_gain_m=float(row.get('elevation_gain_m', 0)),
-                hr_avg=float(row.get('hr_avg', 0)),
-                features={}
-            )
-            db.add(activity)
-            activities_loaded += 1
+            try:
+                activity = models.Activity(
+                    id=demo_activity_id,
+                    user_id=demo_user_id,
+                    sport=sport,
+                    distance_m=float(row['distance_m']),
+                    duration_s=float(row['duration_s']),
+                    elevation_gain_m=float(row.get('elevation_gain_m', 0)),
+                    hr_avg=float(row.get('hr_avg', 0)),
+                    features={},
+                    demo_session_id=session_id
+                )
+                db.add(activity)
+                db.flush()
+                activities_loaded += 1
+            except Exception as e:
+                db.rollback()
+                print(f"   ⚠️  Skipping activity {demo_activity_id}: {str(e)[:100]}")
+                continue
         
         db.commit()
         
@@ -188,7 +257,8 @@ def load_demo_data(req: DemoLoadRequest, db: Session = Depends(get_db)):
             status="success",
             user_id=req.user_id,
             activities_loaded=activities_loaded,
-            message=f"Successfully loaded {activities_loaded} activities for user {req.user_id}"
+            message=f"Successfully loaded {activities_loaded} activities for user {req.user_id} in demo session",
+            session_id=session_id
         )
         
     except HTTPException:
@@ -200,17 +270,34 @@ def load_demo_data(req: DemoLoadRequest, db: Session = Depends(get_db)):
 
 @router.post("/clear")
 def clear_demo_data(db: Session = Depends(get_db)):
-    """Clear all demo data from the database."""
+    """Clear current demo session data only (keeps production data)."""
     check_demo_enabled()
+    
+    session_id = CURRENT_DEMO_SESSION
+    if not session_id:
+        return {
+            "status": "success",
+            "message": "No active demo session to clear"
+        }
+    
     try:
-        # Delete all activities and users
-        db.query(models.Activity).delete()
-        db.query(models.User).delete()
+        # Delete only demo session data
+        activities_deleted = db.query(models.Activity).filter(
+            models.Activity.demo_session_id == session_id
+        ).delete()
+        
+        users_deleted = db.query(models.User).filter(
+            models.User.demo_session_id == session_id
+        ).delete()
+        
         db.commit()
+        
+        # Clear session
+        clear_demo_session()
         
         return {
             "status": "success",
-            "message": "All demo data cleared"
+            "message": f"Demo session cleared: {users_deleted} users, {activities_deleted} activities removed"
         }
     except Exception as e:
         db.rollback()
@@ -219,26 +306,50 @@ def clear_demo_data(db: Session = Depends(get_db)):
 
 @router.get("/stats")
 def get_demo_stats(db: Session = Depends(get_db)):
-    """Get statistics about current demo data in database."""
+    """Get statistics about current demo session (excludes production data)."""
     check_demo_enabled()
+    
+    session_id = CURRENT_DEMO_SESSION
+    
     try:
-        user_count = db.query(models.User).count()
-        activity_count = db.query(models.Activity).count()
-        
-        # Get users with activity counts
-        from sqlalchemy import func
-        user_activities = db.query(
-            models.User.id,
-            func.count(models.Activity.id).label('activity_count')
-        ).outerjoin(models.Activity).group_by(models.User.id).all()
+        if session_id:
+            # Count only demo session data
+            user_count = db.query(models.User).filter(
+                models.User.demo_session_id == session_id
+            ).count()
+            
+            activity_count = db.query(models.Activity).filter(
+                models.Activity.demo_session_id == session_id
+            ).count()
+            
+            # Get demo users with activity counts
+            from sqlalchemy import func
+            user_activities = db.query(
+                models.User.id,
+                func.count(models.Activity.id).label('activity_count')
+            ).filter(
+                models.User.demo_session_id == session_id
+            ).outerjoin(
+                models.Activity,
+                models.Activity.user_id == models.User.id
+            ).group_by(models.User.id).all()
+        else:
+            # No active demo session
+            user_count = 0
+            activity_count = 0
+            user_activities = []
         
         return {
             "total_users": user_count,
             "total_activities": activity_count,
+            "session_id": session_id,
             "users": [
                 {"user_id": user_id, "activities": count}
                 for user_id, count in user_activities
             ]
         }
     except Exception as e:
+        print(f"Error getting demo stats: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(500, f"Failed to get demo stats: {str(e)}")

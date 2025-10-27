@@ -14,7 +14,8 @@ export const healthAPI = {
 };
 
 export const activitiesAPI = {
-  list: (skip = 0, limit = 20) => api.get(`/activities?skip=${skip}&limit=${limit}`),
+  list: (skip = 0, limit = 20, includeDemo = false) => 
+    api.get(`/activities?skip=${skip}&limit=${limit}&include_demo=${includeDemo}`),
   get: (id) => api.get(`/activities/${id}`),
   create: (data) => api.post('/activities', data),
 };
