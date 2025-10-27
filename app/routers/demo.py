@@ -106,10 +106,12 @@ def get_demo_users():
         
         user_stats.columns = ['user_id', 'activity_count', 'total_distance', 'total_duration']
         
-        # Sort by activity count
-        user_stats = user_stats.sort_values('activity_count', ascending=False).head(20)
+        # Sort by activity count and return top users
+        # Show top 50 users (all users have 50 activities in synthetic data)
+        total_users = len(user_stats)
+        user_stats = user_stats.sort_values('activity_count', ascending=False).head(50)
         
-        print(f"   Found {len(user_stats)} unique users")
+        print(f"   Found {len(user_stats)} users (out of {total_users} total)")
         
         return [
             UserInfo(

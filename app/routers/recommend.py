@@ -39,13 +39,58 @@ def recommend(req: RecommendRequest):
         raise HTTPException(400, "lambda_diversity must be between 0.0 and 1.0")
     
     try:
+        # Handle demo session activity IDs and extract route ID
+        # Demo activities have format: "userid_routeid_demo_sessionid"
+        # But trained FAISS index only has route IDs: "routeid" (e.g., "R049")
+        activity_id_for_search = req.activity_id
+        
+        # Remove demo session suffix if present
+        if "_demo_" in req.activity_id:
+            parts = req.activity_id.split("_demo_")
+            activity_id_for_search = parts[0]
+            print(f"🔍 Demo activity detected: {req.activity_id} → {activity_id_for_search}")
+        
+        # Extract just the route ID (the FAISS index uses route IDs without user prefix)
+        # Format: "userid_R049" → "R049"
+        if "_" in activity_id_for_search:
+            id_parts = activity_id_for_search.split("_")
+            # Find the part that looks like a route ID (starts with R or is numeric)
+            for part in id_parts:
+                if part.startswith("R") or part.isdigit():
+                    route_id = part
+                    print(f"🔍 Extracted route ID: {activity_id_for_search} → {route_id}")
+                    activity_id_for_search = route_id
+                    break
+        
+        print(f"🔍 Final search ID: {activity_id_for_search}")
+        
+        # Debug: Check if activity exists in FAISS index
+        recsys.ensure_ready()
+        if recsys.idmap is not None:
+            import numpy as np
+            if activity_id_for_search in recsys.idmap:
+                print(f"✅ Activity found in FAISS index")
+            else:
+                print(f"❌ Activity NOT found in FAISS index")
+                print(f"   Available IDs sample (first 10): {list(recsys.idmap[:min(10, len(recsys.idmap))])}")
+                print(f"   Total routes in index: {len(recsys.idmap)}")
+        
         items = recsys.search_by_activity(
-            req.activity_id, 
+            activity_id_for_search, 
             req.k,
             strategy=req.strategy,
             lambda_diversity=req.lambda_diversity
         )
+        
+        if not items:
+            print(f"⚠️  No recommendations returned for {activity_id_for_search}")
+        else:
+            print(f"✅ Found {len(items)} recommendations")
+            
     except Exception as e:
+        import traceback
+        print(f"❌ Recommendation error: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(500, f"Recommendation failed: {str(e)}")
     
     # Add metadata about the strategy
@@ -73,6 +118,49 @@ def rebuild_index():
         }
     except Exception as e:
         raise HTTPException(500, f"Rebuild failed: {str(e)}")
+
+@router.get("/debug/index-info")
+def get_index_info():
+    """Debug endpoint: Get information about the FAISS index."""
+    try:
+        recsys.ensure_ready()
+        
+        if recsys.index is None or recsys.idmap is None:
+            return {
+                "status": "not_loaded",
+                "message": "FAISS index not loaded"
+            }
+        
+        # Get sample IDs
+        sample_ids = list(recsys.idmap[:min(20, len(recsys.idmap))])
+        
+        # Get statistics
+        total_routes = len(recsys.idmap)
+        index_size = recsys.index.ntotal if recsys.index else 0
+        
+        # Get unique users
+        users = set()
+        for route_id in recsys.idmap:
+            if '_' in str(route_id):
+                user = str(route_id).split('_')[0]
+                users.add(user)
+        
+        return {
+            "status": "loaded",
+            "total_routes": total_routes,
+            "index_size": index_size,
+            "unique_users": len(users),
+            "sample_users": list(users)[:10],
+            "sample_route_ids": sample_ids,
+            "modelcard": recsys.modelcard if hasattr(recsys, 'modelcard') else {}
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
 @router.get("/strategies")
 def get_strategies():

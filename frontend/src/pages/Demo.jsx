@@ -184,9 +184,18 @@ function Demo() {
             <Sparkles className="h-8 w-8 text-blue-600" />
             <h1 className="text-4xl font-bold text-gray-900">Demo Mode</h1>
           </div>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-600 mb-2">
             Load real activity data from CSV to test the recommender system
           </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-900 font-medium mb-1">🎯 How it works:</p>
+            <ul className="text-xs text-blue-800 space-y-1">
+              <li>• <strong>FAISS Index</strong> contains ALL routes from the entire dataset (~638 km of routes)</li>
+              <li>• <strong>Demo Load</strong> adds ONE user's activities to test with (e.g., 50 activities)</li>
+              <li>• <strong>Recommendations</strong> search the ENTIRE index, not just the loaded user's routes</li>
+              <li>• This simulates real-world usage where users see all available routes, not just their own</li>
+            </ul>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -198,17 +207,21 @@ function Demo() {
               {/* Current Stats */}
               {stats && stats.total_activities > 0 && (
                 <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-sm font-medium text-gray-900 mb-2">
-                    Current Data
+                  <div className="text-sm font-medium text-gray-900 mb-2 flex items-center justify-between">
+                    <span>Current Data</span>
+                    <span className="text-xs text-blue-600 font-normal">(Demo Session)</span>
                   </div>
-                  <div className="space-y-1 text-sm text-gray-700">
-                    <div className="flex justify-between">
-                      <span>Users:</span>
+                  <div className="space-y-2 text-sm text-gray-700">
+                    <div className="flex justify-between items-center">
+                      <span>Demo Users:</span>
                       <span className="font-semibold">{stats.total_users}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Activities:</span>
+                    <div className="flex justify-between items-center">
+                      <span>Activities Loaded:</span>
                       <span className="font-semibold">{stats.total_activities}</span>
+                    </div>
+                    <div className="text-xs text-blue-700 mt-2 pt-2 border-t border-blue-300">
+                      These are activities loaded from the selected demo user for testing
                     </div>
                   </div>
                 </div>
@@ -225,6 +238,8 @@ function Demo() {
                   onChange={(e) => setSelectedUser(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   disabled={loading || users.length === 0}
+                  size="1"
+                  style={{ maxHeight: 'none' }}
                 >
                   {users.length === 0 ? (
                     <option>No users available</option>
@@ -236,6 +251,11 @@ function Demo() {
                     ))
                   )}
                 </select>
+                {users.length > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Showing top {users.length} users by activity count
+                  </p>
+                )}
               </div>
 
               {/* Message */}
@@ -281,10 +301,11 @@ function Demo() {
               <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-900 font-medium mb-2">💡 Tips:</p>
                 <ul className="text-xs text-blue-800 space-y-1">
-                  <li>• Select users with many activities (10+)</li>
-                  <li>• After loading, click activities to see recommendations</li>
-                  <li>• Try different strategies and diversity settings</li>
-                  <li>• Clear data to test with a different user</li>
+                  <li>• Select users with many activities (10+) for better testing</li>
+                  <li>• Click any activity to see similar routes from the ENTIRE dataset</li>
+                  <li>• Try different strategies (content vs content_mmr) to compare results</li>
+                  <li>• Adjust diversity slider to see how MMR reranking works</li>
+                  <li>• Clear data to test with a different user profile</li>
                 </ul>
               </div>
             </div>
@@ -294,9 +315,16 @@ function Demo() {
           <div className="lg:col-span-2 space-y-6">
             {/* Activities List */}
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                Loaded Activities {activities.length > 0 && `(${activities.length})`}
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Loaded Activities
+                </h2>
+                {activities.length > 0 && (
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                    {activities.length} {activities.length === 1 ? 'activity' : 'activities'}
+                  </span>
+                )}
+              </div>
 
               {activities.length === 0 ? (
                 <div className="text-center py-12">
@@ -313,35 +341,82 @@ function Demo() {
                     <p className="text-xs text-blue-700 mt-1">
                       The recommender system will find similar activities using FAISS + MMR
                     </p>
+                    {stats && stats.total_activities > activities.length && (
+                      <p className="text-xs text-blue-600 mt-2 pt-2 border-t border-blue-300">
+                        📋 Showing {activities.length} of {stats.total_activities} total activities (limited for display)
+                      </p>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
-                    {activities.map((activity) => (
-                      <div
-                        key={activity.id}
-                        onClick={() => handleSelectActivity(activity)}
-                        className={`p-4 border-2 rounded-lg transition cursor-pointer ${
-                          selectedActivity?.id === activity.id
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="font-semibold text-gray-900 capitalize">
-                              {activity.sport || 'Activity'}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2">
+                    {activities.map((activity, index) => {
+                      // Extract meaningful ID parts for display
+                      const activityNum = index + 1;
+                      const idParts = activity.id.split('_');
+                      const routeId = idParts[1] || activityNum;
+                      
+                      return (
+                        <div
+                          key={activity.id}
+                          onClick={() => handleSelectActivity(activity)}
+                          className={`p-4 border-2 rounded-lg transition cursor-pointer hover:shadow-md ${
+                            selectedActivity?.id === activity.id
+                              ? 'border-blue-500 bg-blue-50 shadow-md'
+                              : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                activity.sport === 'running' ? 'bg-orange-100 text-orange-700' :
+                                activity.sport === 'hiking' ? 'bg-green-100 text-green-700' :
+                                activity.sport === 'cycling' ? 'bg-blue-100 text-blue-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {activity.sport?.toUpperCase() || 'ACTIVITY'}
+                              </span>
+                              <span className="text-xs font-mono text-gray-500">
+                                #{routeId}
+                              </span>
                             </div>
-                            <div className="text-sm text-gray-500 mt-1">
-                              {formatDistance(activity.distance_m)} • {formatDuration(activity.duration_s)}
-                            </div>
-                            {activity.elevation_gain_m > 0 && (
-                              <div className="text-xs text-gray-400 mt-1">
-                                ↗ {Math.round(activity.elevation_gain_m)}m gain
-                              </div>
+                            {selectedActivity?.id === activity.id && (
+                              <span className="text-blue-600 text-xs font-bold">✓ SELECTED</span>
                             )}
                           </div>
+                          
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-2 text-sm">
+                              <span className="font-semibold text-gray-900">
+                                {formatDistance(activity.distance_m)}
+                              </span>
+                              <span className="text-gray-400">•</span>
+                              <span className="text-gray-600">
+                                {formatDuration(activity.duration_s)}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3 text-xs text-gray-500">
+                              {activity.elevation_gain_m > 0 && (
+                                <span className="flex items-center">
+                                  <span className="mr-1">↗</span>
+                                  {Math.round(activity.elevation_gain_m)}m
+                                </span>
+                              )}
+                              {activity.hr_avg > 0 && (
+                                <span className="flex items-center">
+                                  <span className="mr-1">♥</span>
+                                  {Math.round(activity.hr_avg)} bpm
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Activity ID tooltip */}
+                            <div className="text-xs text-gray-400 truncate mt-2 pt-2 border-t border-gray-100" title={activity.id}>
+                              ID: {activity.id.substring(0, 30)}...
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -428,8 +503,14 @@ function Demo() {
                   </div>
                 ) : (
                   <div className="space-y-2">
+                    <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-xs text-green-800">
+                        ✨ <strong>Searching entire route database:</strong> These recommendations come from ALL routes in the system, 
+                        not just the loaded user's activities. This demonstrates how FAISS searches across the full dataset.
+                      </p>
+                    </div>
                     <div className="text-sm font-medium text-gray-700 mb-2">
-                      Top {recommendations.length} Similar Activities:
+                      Top {recommendations.length} Similar Routes from Entire Dataset:
                     </div>
                     {recommendations.map((rec, index) => (
                       <div
