@@ -1,17 +1,11 @@
-# Python-generated files
+
+.venv/
 __pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
-
-# Sensitive files (OAuth tokens and credentials)
+*.pyc
+*.pyo
+*.faiss
+/data/
 tokens.json
 .env
-
-# Jupyter notebook checkpoints
-.ipynb_checkpoints/
+API_EXAMPLES.md
+SETUP.md

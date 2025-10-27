@@ -1,0 +1,20 @@
+[project]
+name = "strava-app"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "pydantic>=2",
+  "sqlalchemy>=2",
+  "psycopg2-binary",
+  "pandas",
+  "numpy",
+  "scikit-learn",
+  "faiss-cpu",
+  "python-dotenv",
+  "apscheduler",
+]
+
+[tool.uv]
+
