@@ -11,13 +11,12 @@ class User(Base):
 class Activity(Base):
     __tablename__ = "activities"
     id = Column(String, primary_key=True)
-    user_id = Column(String, ForeignKey("users.id"))
+    user_id = Column(String, nullable=True)  # Made nullable - no FK constraint for flexibility
     sport = Column(String)
-    started_at = Column(DateTime)
+    started_at = Column(DateTime, nullable=True)
     duration_s = Column(Float)
     distance_m = Column(Float)
-    elevation_gain_m = Column(Float)
-    hr_avg = Column(Float)
-    features = Column(JSONB)  # store raw feature dict for now
-    user = relationship("User")
+    elevation_gain_m = Column(Float, nullable=True)
+    hr_avg = Column(Float, nullable=True)
+    features = Column(JSONB, nullable=True)  # store raw feature dict for now
 

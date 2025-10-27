@@ -34,6 +34,8 @@ class Recommender:
             df, X, scaler = load_csv_features(csv_path)
             self.df = df
             self.scaler = scaler
+            # Ensure array is C-contiguous for FAISS
+            X = np.ascontiguousarray(X)
             # cosine ≈ L2 on normalized vectors
             if settings.recsys_metric == "cosine":
                 faiss.normalize_L2(X)
@@ -58,7 +60,7 @@ class Recommender:
                 row = int(np.where(self.idmap == activity_id)[0][0])
             except IndexError:
                 return []
-            x = self.index.reconstruct(row).reshape(1,-1)
+            x = np.ascontiguousarray(self.index.reconstruct(row).reshape(1,-1))
             scores, idx = self.index.search(x, k+1)  # +1 to skip self
             ids = []
             for j, sc in zip(idx[0], scores[0]):
@@ -72,7 +74,7 @@ class Recommender:
     def search_by_vector(self, vec: np.ndarray, k: int) -> List[Tuple[str, float]]:
         self.ensure_ready()
         with self._lock:
-            vv = vec.astype("float32").reshape(1,-1)
+            vv = np.ascontiguousarray(vec.astype("float32").reshape(1,-1))
             if settings.recsys_metric=="cosine":
                 faiss.normalize_L2(vv)
             scores, idx = self.index.search(vv, k)
