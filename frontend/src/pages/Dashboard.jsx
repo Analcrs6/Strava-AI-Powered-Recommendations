@@ -2,15 +2,13 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { activitiesAPI } from '../services/api';
 import { formatDistance, formatDuration, formatElevation, formatPace, getSportIcon, getSportColor } from '../utils/format';
-import { Clock, TrendingUp, Mountain, Heart, Sparkles } from 'lucide-react';
+import { Clock, TrendingUp, Mountain, Heart } from 'lucide-react';
 import RecommendationsPanel from '../components/RecommendationsPanel';
-import DemoPanel from '../components/DemoPanel';
 
 function Dashboard() {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedActivity, setSelectedActivity] = useState(null);
-  const [demoExpanded, setDemoExpanded] = useState(false);
 
   useEffect(() => {
     loadActivities();
@@ -27,14 +25,6 @@ function Dashboard() {
     }
   };
 
-  const handleDemoDataLoaded = () => {
-    loadActivities();
-  };
-
-  const toggleDemo = () => {
-    setDemoExpanded(!demoExpanded);
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -45,29 +35,12 @@ function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Demo Panel Modal */}
-      <DemoPanel 
-        onDataLoaded={handleDemoDataLoaded}
-        isExpanded={demoExpanded}
-        onToggle={toggleDemo}
-      />
-
-      {/* Hero Section with Demo Button */}
-      <div className="bg-gradient-to-r from-strava-orange to-orange-600 rounded-2xl p-8 mb-8 text-white relative">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-strava-orange to-orange-600 rounded-2xl p-8 mb-8 text-white">
         <h1 className="text-4xl font-bold mb-2">Welcome back, Athlete! 👋</h1>
         <p className="text-lg opacity-90">
           Track your activities and discover similar workouts with our recommender system
         </p>
-        
-        {/* Demo Mode Button - Discrete Badge Style */}
-        <button
-          onClick={toggleDemo}
-          className="absolute top-6 right-6 flex items-center space-x-1.5 bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full hover:bg-white/30 transition text-sm font-medium border border-white/30"
-          title="Try Demo Mode"
-        >
-          <Sparkles className="h-4 w-4" />
-          <span>Demo</span>
-        </button>
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
             <div className="text-3xl font-bold">{activities.length}</div>

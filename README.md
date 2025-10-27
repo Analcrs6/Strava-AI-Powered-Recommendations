@@ -61,10 +61,16 @@ The app will automatically load the pre-trained model on startup.
 ### Step 3: Try Demo Mode
 
 1. Open http://localhost:3000
-2. Click **"Demo Mode"** button (top right)
-3. Demo auto-loads user with most activities
-4. Click any activity to see recommendations
-5. Try different strategies!
+2. Click **"Demo"** in navigation (blue button)
+3. Select a user and click "Load Demo Data"
+4. View loaded activities
+5. Click activities to see recommendations
+
+**To disable demo mode in production:**
+```bash
+# In .env or docker-compose.yml
+DEMO_MODE_ENABLED=false
+```
 
 ### Access Points
 

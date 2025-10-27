@@ -127,7 +127,8 @@ class Recommender:
                 print(f"  ✅ Feature columns: {feature_columns}")
             
             # Build FAISS index from pre-trained embeddings
-            X = np.ascontiguousarray(embeddings)
+            # IMPORTANT: FAISS requires float32 dtype
+            X = np.ascontiguousarray(embeddings.astype('float32'))
             self.feature_vectors = X.copy()  # Store original for MMR
             
             # Normalize for cosine similarity

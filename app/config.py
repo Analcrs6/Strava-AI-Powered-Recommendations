@@ -19,7 +19,10 @@ class Settings(BaseModel):
     recsys_metric: str = os.getenv("RECSYS_METRIC", "cosine")
 
     # Seed
-    csv_seed_path: str = os.getenv("CSV_SEED_PATH", "/datasets/synthetic_strava_data.csv")
+    csv_seed_path: str = os.getenv("CSV_SEED_PATH", "app/resources/synthetic_strava_data.csv")
+    
+    # Demo mode
+    demo_mode_enabled: bool = os.getenv("DEMO_MODE_ENABLED", "true").lower() == "true"
 
     @property
     def database_url(self) -> str:

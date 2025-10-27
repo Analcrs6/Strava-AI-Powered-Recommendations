@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { Activity, TrendingUp, Plus, Home } from 'lucide-react';
+import { Activity, TrendingUp, Plus, Home, Sparkles } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CreateActivity from './pages/CreateActivity';
 import ActivityDetail from './pages/ActivityDetail';
+import Demo from './pages/Demo';
 
 function App() {
   return (
@@ -30,10 +31,17 @@ function App() {
                 </Link>
                 <Link 
                   to="/create" 
-                  className="flex items-center space-x-1 bg-strava-orange text-white px-4 py-2 rounded-lg hover:bg-strava-orange-dark transition"
+                  className="flex items-center space-x-1 text-gray-700 hover:text-strava-orange transition"
                 >
                   <Plus className="h-5 w-5" />
                   <span>New Activity</span>
+                </Link>
+                <Link 
+                  to="/demo" 
+                  className="flex items-center space-x-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                >
+                  <Sparkles className="h-5 w-5" />
+                  <span>Demo</span>
                 </Link>
               </nav>
             </div>
@@ -46,6 +54,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/create" element={<CreateActivity />} />
             <Route path="/activity/:id" element={<ActivityDetail />} />
+            <Route path="/demo" element={<Demo />} />
           </Routes>
         </main>
 

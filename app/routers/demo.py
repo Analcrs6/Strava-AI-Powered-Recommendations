@@ -10,6 +10,14 @@ from ..services.recommender import recsys
 
 router = APIRouter(prefix="/demo", tags=["demo"])
 
+def check_demo_enabled():
+    """Check if demo mode is enabled."""
+    if not settings.demo_mode_enabled:
+        raise HTTPException(
+            status_code=403, 
+            detail="Demo mode is disabled. Set DEMO_MODE_ENABLED=true to enable it."
+        )
+
 
 class UserInfo(BaseModel):
     user_id: str
@@ -32,14 +40,37 @@ class DemoLoadResponse(BaseModel):
 @router.get("/users", response_model=List[UserInfo])
 def get_demo_users():
     """Get list of available users from CSV for demo."""
+    check_demo_enabled()
     try:
-        df = pd.read_csv(settings.csv_seed_path)
+        import os
+        csv_path = settings.csv_seed_path
+        
+        # Check if file exists
+        if not os.path.exists(csv_path):
+            print(f"❌ CSV file not found at: {csv_path}")
+            print(f"   Current working directory: {os.getcwd()}")
+            print(f"   Files in app/resources/: {os.listdir('app/resources') if os.path.exists('app/resources') else 'directory not found'}")
+            raise HTTPException(404, f"CSV file not found at {csv_path}")
+        
+        print(f"📊 Loading demo users from: {csv_path}")
+        df = pd.read_csv(csv_path)
+        print(f"   Loaded {len(df)} rows")
+        print(f"   Columns: {df.columns.tolist()}")
         
         # Ensure we have the right columns
         if "distance_km_user" in df.columns:
             df["distance_m"] = df["distance_km_user"] * 1000
-        if "average_pace_min_per_km" in df.columns:
-            df["duration_s"] = df["average_pace_min_per_km"] * df.get("distance_km_user", 5.0) * 60
+        elif "distance_m" not in df.columns:
+            df["distance_m"] = 5000  # default 5km
+            
+        if "average_pace_min_per_km" in df.columns and "distance_km_user" in df.columns:
+            df["duration_s"] = df["average_pace_min_per_km"] * df["distance_km_user"] * 60
+        elif "duration_s" not in df.columns:
+            df["duration_s"] = 1800  # default 30 minutes
+        
+        # Check if user_id column exists
+        if "user_id" not in df.columns:
+            raise HTTPException(500, "CSV file missing 'user_id' column")
         
         # Get user statistics
         user_stats = df.groupby('user_id').agg({
@@ -53,6 +84,8 @@ def get_demo_users():
         # Sort by activity count
         user_stats = user_stats.sort_values('activity_count', ascending=False).head(20)
         
+        print(f"   Found {len(user_stats)} unique users")
+        
         return [
             UserInfo(
                 user_id=str(row['user_id']),
@@ -62,7 +95,12 @@ def get_demo_users():
             )
             for _, row in user_stats.iterrows()
         ]
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"❌ Error loading demo users: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(500, f"Failed to load demo users: {str(e)}")
 
 
@@ -74,6 +112,7 @@ def load_demo_data(req: DemoLoadRequest, db: Session = Depends(get_db)):
     This populates the database with real activities from the CSV,
     allowing you to test recommendations with actual user data.
     """
+    check_demo_enabled()
     try:
         # Load CSV
         df = pd.read_csv(settings.csv_seed_path)
@@ -162,6 +201,7 @@ def load_demo_data(req: DemoLoadRequest, db: Session = Depends(get_db)):
 @router.post("/clear")
 def clear_demo_data(db: Session = Depends(get_db)):
     """Clear all demo data from the database."""
+    check_demo_enabled()
     try:
         # Delete all activities and users
         db.query(models.Activity).delete()
@@ -180,6 +220,7 @@ def clear_demo_data(db: Session = Depends(get_db)):
 @router.get("/stats")
 def get_demo_stats(db: Session = Depends(get_db)):
     """Get statistics about current demo data in database."""
+    check_demo_enabled()
     try:
         user_count = db.query(models.User).count()
         activity_count = db.query(models.Activity).count()
