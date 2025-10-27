@@ -21,12 +21,14 @@ export const activitiesAPI = {
 };
 
 export const recommendAPI = {
-  getRecommendations: (activityId, k = 10, strategy = 'content_mmr', lambdaDiversity = 0.3) => 
+  getRecommendations: (activityId, k = 10, strategy = 'content_mmr', lambdaDiversity = 0.3, excludeSeen = false, userId = null) => 
     api.post('/recommend', { 
       activity_id: activityId, 
       k,
       strategy,
-      lambda_diversity: lambdaDiversity
+      lambda_diversity: lambdaDiversity,
+      exclude_seen: excludeSeen,
+      user_id: userId
     }),
   rebuildIndex: () => api.post('/recommend/rebuild'),
   getStrategies: () => api.get('/recommend/strategies'),

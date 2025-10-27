@@ -24,7 +24,7 @@ def mmr_rerank(
         lambda_diversity: Trade-off parameter (0 = pure relevance, 1 = pure diversity)
         
     Returns:
-        List of (id, score) tuples in MMR order
+        List of (id, MMR_score) tuples in MMR order
     """
     if len(candidate_ids) == 0:
         return []
@@ -33,48 +33,68 @@ def mmr_rerank(
         # Not enough candidates to rerank
         return [(cid, float(score)) for cid, score in zip(candidate_ids, similarity_scores)]
     
+    print(f"  [MMR] Starting reranking: {len(candidate_ids)} candidates, lambda={lambda_diversity}")
+    print(f"  [MMR] Original top 3: {candidate_ids[:3]}")
+    
     # Normalize vectors for cosine similarity
     norms = np.linalg.norm(candidate_vectors, axis=1, keepdims=True)
     norms[norms == 0] = 1  # Avoid division by zero
     normalized_vectors = candidate_vectors / norms
+    
+    # Normalize similarity scores to 0-1 range for MMR
+    if len(similarity_scores) > 0:
+        max_sim = np.max(similarity_scores)
+        min_sim = np.min(similarity_scores)
+        sim_range = max_sim - min_sim if max_sim > min_sim else 1.0
+        norm_similarity = (similarity_scores - min_sim) / sim_range
+    else:
+        norm_similarity = similarity_scores
     
     # Track selected and remaining indices
     selected_indices = []
     remaining_indices = list(range(len(candidate_ids)))
     
     # MMR selection loop
-    for _ in range(min(top_m, len(candidate_ids))):
+    for iteration in range(min(top_m, len(candidate_ids))):
         if not remaining_indices:
             break
             
         mmr_scores = []
         
         for idx in remaining_indices:
-            # Relevance score (from original similarity)
-            relevance = similarity_scores[idx]
+            # Relevance score (normalized)
+            relevance = norm_similarity[idx]
             
-            # Diversity score (max similarity to already selected items)
+            # Diversity penalty (max similarity to already selected items)
             if selected_indices:
                 selected_vectors = normalized_vectors[selected_indices]
                 candidate_vector = normalized_vectors[idx:idx+1]
                 similarities = cosine_similarity(candidate_vector, selected_vectors)[0]
-                max_sim = np.max(similarities)
+                max_sim_to_selected = np.max(similarities)
             else:
-                max_sim = 0
+                max_sim_to_selected = 0
             
-            # MMR formula: λ * relevance - (1-λ) * max_similarity
-            mmr_score = lambda_diversity * relevance - (1 - lambda_diversity) * max_sim
-            mmr_scores.append((idx, mmr_score))
+            # MMR formula: λ * relevance - (1-λ) * max_similarity_to_selected
+            # Higher lambda = more relevance, lower lambda = more diversity
+            mmr_score = lambda_diversity * relevance - (1 - lambda_diversity) * max_sim_to_selected
+            mmr_scores.append((idx, mmr_score, relevance, max_sim_to_selected))
         
         # Select item with highest MMR score
-        best_idx, best_score = max(mmr_scores, key=lambda x: x[1])
+        best_idx, best_mmr, best_rel, best_div = max(mmr_scores, key=lambda x: x[1])
+        
+        if iteration < 3:  # Log first 3 selections
+            print(f"  [MMR] #{iteration+1}: {candidate_ids[best_idx]} - mmr={best_mmr:.4f}, rel={best_rel:.4f}, div_penalty={best_div:.4f}")
+        
         selected_indices.append(best_idx)
         remaining_indices.remove(best_idx)
     
-    # Return results with original similarity scores
+    # Return results with MMR-computed scores (normalized similarity scores)
     results = []
-    for idx in selected_indices:
-        results.append((candidate_ids[idx], float(similarity_scores[idx])))
+    for rank, idx in enumerate(selected_indices):
+        # Use normalized similarity as the score for consistency
+        results.append((candidate_ids[idx], float(norm_similarity[idx])))
+    
+    print(f"  [MMR] Final top 3: {[r[0] for r in results[:3]]}")
     
     return results
 

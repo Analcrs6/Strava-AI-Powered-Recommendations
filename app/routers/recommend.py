@@ -1,12 +1,15 @@
-from fastapi import APIRouter, HTTPException
-from ..schemas import RecommendRequest, RecommendResponse, RecommendItem
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+from ..schemas import RecommendRequest, RecommendResponse, RecommendItem, RouteMetadata
 from ..services.recommender import recsys
 from ..config import settings
+from ..db import get_db
+from .. import models
 
 router = APIRouter(prefix="/recommend", tags=["recommend"])
 
 @router.post("", response_model=RecommendResponse)
-def recommend(req: RecommendRequest):
+def recommend(req: RecommendRequest, db: Session = Depends(get_db)):
     """
     Get activity recommendations using different strategies.
     
@@ -30,7 +33,7 @@ def recommend(req: RecommendRequest):
         raise HTTPException(400, "activity_id is required")
     
     # Validate strategy
-    valid_strategies = ["content", "content_mmr", "ensemble", "ensemble_mmr"]
+    valid_strategies = ["content", "content_mmr", "ensemble", "ensemble_mmr", "popularity"]
     if req.strategy not in valid_strategies:
         raise HTTPException(400, f"Invalid strategy. Must be one of: {valid_strategies}")
     
@@ -63,6 +66,7 @@ def recommend(req: RecommendRequest):
                     break
         
         print(f"🔍 Final search ID: {activity_id_for_search}")
+        print(f"⚙️  Strategy: {req.strategy}, Lambda: {req.lambda_diversity}, K: {req.k}")
         
         # Debug: Check if activity exists in FAISS index
         recsys.ensure_ready()
@@ -82,6 +86,8 @@ def recommend(req: RecommendRequest):
             lambda_diversity=req.lambda_diversity
         )
         
+        print(f"📊 Returned {len(items)} items using strategy: {req.strategy}")
+        
         if not items:
             print(f"⚠️  No recommendations returned for {activity_id_for_search}")
         else:
@@ -97,11 +103,65 @@ def recommend(req: RecommendRequest):
     metadata = {
         "description": get_strategy_description(req.strategy),
         "uses_mmr": "mmr" in req.strategy,
-        "evaluation_notes": get_strategy_performance(req.strategy)
+        "evaluation_notes": get_strategy_performance(req.strategy),
+        "query_route_id": activity_id_for_search
     }
     
+    # Filter out seen routes if requested
+    filtered_items = items
+    seen_routes = set()
+    
+    if req.exclude_seen and req.user_id:
+        try:
+            # Get user's activity history
+            user_activities = db.query(models.Activity).filter(
+                models.Activity.user_id == req.user_id
+            ).all()
+            
+            # Extract route IDs from activity IDs (format: userid_routeid or just routeid)
+            for activity in user_activities:
+                act_id = activity.id
+                # Extract route ID
+                if "_" in act_id:
+                    parts = act_id.split("_")
+                    for part in parts:
+                        if part.startswith("R") or part.isdigit():
+                            seen_routes.add(part)
+                            break
+                else:
+                    seen_routes.add(act_id)
+            
+            print(f"🚫 Filtering {len(seen_routes)} seen routes for user {req.user_id}")
+            
+            # Filter recommendations
+            filtered_items = [(aid, score) for aid, score in items if aid not in seen_routes]
+            
+            if len(filtered_items) < len(items):
+                print(f"   Filtered: {len(items)} → {len(filtered_items)} recommendations")
+        except Exception as e:
+            print(f"⚠️  Error filtering seen routes: {e}")
+            # Continue with unfiltered results
+    
+    # Enrich items with route metadata
+    enriched_items = []
+    for activity_id, score in filtered_items:
+        route_meta = recsys.get_route_metadata(activity_id)
+        if route_meta:
+            enriched_items.append(RecommendItem(
+                activity_id=activity_id,
+                score=score,
+                metadata=RouteMetadata(**route_meta)
+            ))
+        else:
+            enriched_items.append(RecommendItem(activity_id=activity_id, score=score))
+    
+    # Update metadata
+    if req.exclude_seen:
+        metadata["filtered_seen_count"] = len(items) - len(filtered_items)
+        metadata["seen_routes"] = list(seen_routes)[:5]  # Sample of seen routes
+    
     return RecommendResponse(
-        items=[RecommendItem(activity_id=i, score=s) for i, s in items],
+        items=enriched_items,
         strategy=req.strategy,
         lambda_diversity=req.lambda_diversity if "mmr" in req.strategy else None,
         metadata=metadata
@@ -165,6 +225,10 @@ def get_index_info():
 @router.get("/strategies")
 def get_strategies():
     """Get information about available recommendation strategies."""
+    # Get model config
+    config = recsys.get_config()
+    modelcard = config.get('modelcard', {})
+    
     return {
         "strategies": [
             {
@@ -185,6 +249,14 @@ def get_strategies():
                 "recommended": True
             },
             {
+                "name": "popularity",
+                "display_name": "Popularity",
+                "description": "Recommends popular routes based on usage frequency",
+                "speed": "fastest",
+                "quality": "cold-start friendly",
+                "use_case": "New users, exploration"
+            },
+            {
                 "name": "ensemble",
                 "display_name": "Ensemble (Content + Collaborative)",
                 "description": "Combines content-based and collaborative filtering",
@@ -203,6 +275,13 @@ def get_strategies():
                 "status": "future"
             }
         ],
+        "model_info": {
+            "name": modelcard.get('model_name', 'Unknown'),
+            "version": modelcard.get('version', '1.0.0'),
+            "total_routes": config.get('total_routes', 0),
+            "has_popularity": config.get('has_popularity', False),
+            "has_metadata": config.get('has_metadata', False)
+        },
         "evaluation_summary": {
             "content_mmr": {
                 "recall_at_10": 0.10,
@@ -222,18 +301,29 @@ def get_strategies():
 def get_strategy_description(strategy: str) -> str:
     descriptions = {
         "content": "Pure similarity-based recommendations using activity features",
-        "content_mmr": "Similarity-based with diversity optimization via MMR reranking",
+        "content_mmr": "Similarity-based with diversity optimization via MMR reranking (⭐ Recommended)",
         "ensemble": "Hybrid content-based and collaborative filtering",
-        "ensemble_mmr": "Hybrid approach with diversity optimization"
+        "ensemble_mmr": "Hybrid approach with diversity optimization",
+        "popularity": "Popularity-based recommendations (cold-start/fallback)"
     }
     return descriptions.get(strategy, "Unknown strategy")
 
 def get_strategy_performance(strategy: str) -> str:
+    # Load actual metrics from modelcard if available
+    config = recsys.get_config()
+    metrics = config.get('modelcard', {}).get('evaluation_metrics', {})
+    
+    if metrics and strategy in ["content", "content_mmr"]:
+        recall = metrics.get('recall_at_10', 0)
+        map_score = metrics.get('map_at_10', 0)
+        return f"Recall@10: {recall:.3f}, MAP@10: {map_score:.3f}"
+    
     notes = {
         "content": "Baseline performance. Fast but may return similar/redundant results.",
-        "content_mmr": "Best MAP@10 (0.043) and NDCG. Balanced relevance and diversity. ⭐ Recommended",
+        "content_mmr": "Best MAP and NDCG. Balanced relevance and diversity. ⭐ Recommended",
         "ensemble": "Modest improvements over baseline. Better with more user data.",
-        "ensemble_mmr": "Best Recall@10 (0.12). Finds more relevant items overall."
+        "ensemble_mmr": "Best Recall. Finds more relevant items overall.",
+        "popularity": "Good for cold-start, explores popular routes"
     }
     return notes.get(strategy, "")
 
