@@ -73,11 +73,11 @@ def get_demo_users():
             raise HTTPException(500, "CSV file missing 'user_id' column")
         
         # Get user statistics
-        user_stats = df.groupby('user_id').agg({
-            'user_id': 'count',
+        user_stats = df.groupby('user_id', as_index=False).agg({
+            'route_id': 'count',  # Count activities per user
             'distance_m': 'sum',
             'duration_s': 'sum'
-        }).reset_index()
+        })
         
         user_stats.columns = ['user_id', 'activity_count', 'total_distance', 'total_duration']
         
