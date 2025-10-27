@@ -1,17 +1,51 @@
-# Strava Clone with AI Recommender 🏃‍♂️🤖
+# Strava Clone with Recommender System 🏃‍♂️🎯
 
-A full-stack Strava clone with an integrated FAISS-powered activity recommendation system.
+A full-stack Strava clone with an integrated FAISS-powered activity recommendation system featuring multiple strategies and MMR reranking.
 
 ## 🎯 Features
 
-- **Modern React UI** - Beautiful, responsive frontend
+- **Modern React UI** - Beautiful, responsive frontend with demo mode
 - **Activity Tracking** - Create and manage workouts
-- **AI Recommendations** - FAISS similarity search for activity suggestions
+- **Smart Recommendations** - FAISS similarity search with Content-Based + MMR
+- **Multiple Strategies** - Content, Content+MMR, Ensemble, Ensemble+MMR
 - **FastAPI Backend** - High-performance REST API
 - **PostgreSQL + PostGIS** - Spatial database
 - **Docker Compose** - One-command deployment
 
 ## 🚀 Quick Start
+
+### Step 1: Train the Model (First Time Only)
+
+The recommender model must be trained from the Jupyter notebook before starting the application.
+
+```bash
+# Open the training notebook
+cd app/resources
+jupyter notebook Strave_recommender_final.ipynb
+
+# Run all cells - the last cell saves the trained model
+# Look for: "✅ MODEL TRAINING & EXPORT COMPLETE!"
+```
+
+This creates a `trained_models/` folder with:
+```
+trained_models/
+├── retrieval/ (scaler, embeddings, FAISS, id maps)
+├── mf/ (Matrix Factorization, if enabled)
+├── heuristics/ (popularity scores, MMR config)
+├── meta/ (route metadata, user interactions)
+├── modelcard.json (training info & metrics)
+└── inference_config.json (serving defaults)
+```
+
+**Model location:** The `trained_models/` folder should already be in `app/resources/` after running the notebook. Verify it's there:
+
+```bash
+ls app/resources/trained_models/
+# Should show: retrieval/, heuristics/, meta/, modelcard.json, etc.
+```
+
+### Step 2: Start the Application
 
 ```bash
 # Build and start all services
@@ -22,7 +56,17 @@ make build
 make up
 ```
 
-### Access the Application
+The app will automatically load the pre-trained model on startup.
+
+### Step 3: Try Demo Mode
+
+1. Open http://localhost:3000
+2. Click **"Demo Mode"** button (top right)
+3. Demo auto-loads user with most activities
+4. Click any activity to see recommendations
+5. Try different strategies!
+
+### Access Points
 
 - **Frontend UI**: http://localhost:3000 ← **Start here!**
 - **Backend API**: http://localhost:8080

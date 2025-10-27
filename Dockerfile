@@ -16,7 +16,13 @@ RUN pip install --no-cache-dir uv && \
 # Setup app directory
 WORKDIR /workspace
 COPY app ./app
+
+# Create directories
 RUN mkdir -p /data/recsys
+
+# Note: Pre-trained model should be at app/resources/trained_models/
+# Train the model in Jupyter notebook before building Docker image
+# The app will load it automatically on startup
 
 EXPOSE 8000
 CMD ["python","-m","uvicorn","app.main:app","--host","0.0.0.0","--port","8000"]

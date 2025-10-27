@@ -12,3 +12,9 @@ SETUP.md
 QUICKSTART.md
 UI_GUIDE.md
 RECOMMENDER_GUIDE.md
+DEMO_MODE_GUIDE.md
+TRAINING_GUIDE.md
+MODEL_ARCHITECTURE.md
+
+# Trained models (large files)
+app/resources/trained_models/

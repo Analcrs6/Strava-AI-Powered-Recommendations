@@ -1,0 +1,203 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+from pydantic import BaseModel
+import pandas as pd
+from ..db import get_db
+from .. import models
+from ..config import settings
+from ..services.recommender import recsys
+
+router = APIRouter(prefix="/demo", tags=["demo"])
+
+
+class UserInfo(BaseModel):
+    user_id: str
+    activity_count: int
+    total_distance: float
+    total_duration: float
+
+
+class DemoLoadRequest(BaseModel):
+    user_id: str
+
+
+class DemoLoadResponse(BaseModel):
+    status: str
+    user_id: str
+    activities_loaded: int
+    message: str
+
+
+@router.get("/users", response_model=List[UserInfo])
+def get_demo_users():
+    """Get list of available users from CSV for demo."""
+    try:
+        df = pd.read_csv(settings.csv_seed_path)
+        
+        # Ensure we have the right columns
+        if "distance_km_user" in df.columns:
+            df["distance_m"] = df["distance_km_user"] * 1000
+        if "average_pace_min_per_km" in df.columns:
+            df["duration_s"] = df["average_pace_min_per_km"] * df.get("distance_km_user", 5.0) * 60
+        
+        # Get user statistics
+        user_stats = df.groupby('user_id').agg({
+            'user_id': 'count',
+            'distance_m': 'sum',
+            'duration_s': 'sum'
+        }).reset_index()
+        
+        user_stats.columns = ['user_id', 'activity_count', 'total_distance', 'total_duration']
+        
+        # Sort by activity count
+        user_stats = user_stats.sort_values('activity_count', ascending=False).head(20)
+        
+        return [
+            UserInfo(
+                user_id=str(row['user_id']),
+                activity_count=int(row['activity_count']),
+                total_distance=float(row['total_distance']),
+                total_duration=float(row['total_duration'])
+            )
+            for _, row in user_stats.iterrows()
+        ]
+    except Exception as e:
+        raise HTTPException(500, f"Failed to load demo users: {str(e)}")
+
+
+@router.post("/load", response_model=DemoLoadResponse)
+def load_demo_data(req: DemoLoadRequest, db: Session = Depends(get_db)):
+    """
+    Load activities for a specific user from CSV into the database for demo.
+    
+    This populates the database with real activities from the CSV,
+    allowing you to test recommendations with actual user data.
+    """
+    try:
+        # Load CSV
+        df = pd.read_csv(settings.csv_seed_path)
+        
+        # Filter for selected user
+        user_df = df[df['user_id'] == req.user_id].copy()
+        
+        if len(user_df) == 0:
+            raise HTTPException(404, f"User {req.user_id} not found in CSV")
+        
+        # Transform data
+        if "distance_km_user" in user_df.columns:
+            user_df["distance_m"] = user_df["distance_km_user"] * 1000
+        if "elevation_meters_user" in user_df.columns:
+            user_df["elevation_gain_m"] = user_df["elevation_meters_user"]
+        if "average_pace_min_per_km" in user_df.columns:
+            user_df["duration_s"] = user_df["average_pace_min_per_km"] * user_df.get("distance_km_user", 5.0) * 60
+        
+        # Create activity IDs
+        if "route_id" in user_df.columns:
+            user_df["id"] = user_df["user_id"].astype(str) + "_" + user_df["route_id"].astype(str)
+        else:
+            user_df["id"] = [f"{req.user_id}_activity_{i}" for i in range(len(user_df))]
+        
+        # Ensure required columns
+        for col in ['distance_m', 'duration_s', 'elevation_gain_m']:
+            if col not in user_df.columns:
+                user_df[col] = 0.0
+        
+        user_df = user_df.fillna(0.0)
+        
+        # Create user if doesn't exist
+        existing_user = db.get(models.User, req.user_id)
+        if not existing_user:
+            user = models.User(id=req.user_id, name=f"Demo User {req.user_id}")
+            db.add(user)
+        
+        # Load activities
+        activities_loaded = 0
+        for _, row in user_df.iterrows():
+            activity_id = str(row['id'])
+            
+            # Check if activity already exists
+            existing = db.get(models.Activity, activity_id)
+            if existing:
+                continue
+            
+            # Determine sport type
+            sport = "running"  # default
+            if "surface_type_route" in row:
+                surface = str(row["surface_type_route"]).lower()
+                if "trail" in surface or "gravel" in surface:
+                    sport = "hiking"
+                elif "road" in surface:
+                    sport = "cycling" if row.get("distance_m", 0) > 15000 else "running"
+            
+            activity = models.Activity(
+                id=activity_id,
+                user_id=req.user_id,
+                sport=sport,
+                distance_m=float(row['distance_m']),
+                duration_s=float(row['duration_s']),
+                elevation_gain_m=float(row.get('elevation_gain_m', 0)),
+                hr_avg=float(row.get('hr_avg', 0)),
+                features={}
+            )
+            db.add(activity)
+            activities_loaded += 1
+        
+        db.commit()
+        
+        return DemoLoadResponse(
+            status="success",
+            user_id=req.user_id,
+            activities_loaded=activities_loaded,
+            message=f"Successfully loaded {activities_loaded} activities for user {req.user_id}"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, f"Failed to load demo data: {str(e)}")
+
+
+@router.post("/clear")
+def clear_demo_data(db: Session = Depends(get_db)):
+    """Clear all demo data from the database."""
+    try:
+        # Delete all activities and users
+        db.query(models.Activity).delete()
+        db.query(models.User).delete()
+        db.commit()
+        
+        return {
+            "status": "success",
+            "message": "All demo data cleared"
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, f"Failed to clear demo data: {str(e)}")
+
+
+@router.get("/stats")
+def get_demo_stats(db: Session = Depends(get_db)):
+    """Get statistics about current demo data in database."""
+    try:
+        user_count = db.query(models.User).count()
+        activity_count = db.query(models.Activity).count()
+        
+        # Get users with activity counts
+        from sqlalchemy import func
+        user_activities = db.query(
+            models.User.id,
+            func.count(models.Activity.id).label('activity_count')
+        ).outerjoin(models.Activity).group_by(models.User.id).all()
+        
+        return {
+            "total_users": user_count,
+            "total_activities": activity_count,
+            "users": [
+                {"user_id": user_id, "activities": count}
+                for user_id, count in user_activities
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Failed to get demo stats: {str(e)}")

@@ -37,5 +37,12 @@ export const usersAPI = {
   create: (data) => api.post('/users', data),
 };
 
+export const demoAPI = {
+  getUsers: () => api.get('/demo/users'),
+  loadUser: (userId) => api.post('/demo/load', { user_id: userId }),
+  clearData: () => api.post('/demo/clear'),
+  getStats: () => api.get('/demo/stats'),
+};
+
 export default api;
 
