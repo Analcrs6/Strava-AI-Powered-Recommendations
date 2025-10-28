@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { demoAPI, activitiesAPI, recommendAPI } from '../services/api';
-import { Sparkles, Trash2, Users, AlertCircle, CheckCircle, Play, ArrowLeft, TrendingUp, Settings, Sliders } from 'lucide-react';
+import { Sparkles, Trash2, Users, AlertCircle, CheckCircle, Play, ArrowLeft, TrendingUp, Settings, Sliders, Filter, Zap, BarChart3, Activity as ActivityIcon } from 'lucide-react';
 import { formatDistance, formatDuration } from '../utils/format';
 
 function Demo() {
@@ -18,7 +18,9 @@ function Demo() {
   const [recLoading, setRecLoading] = useState(false);
   const [strategy, setStrategy] = useState('content_mmr');
   const [lambdaDiversity, setLambdaDiversity] = useState(0.3);
+  const [excludeSeen, setExcludeSeen] = useState(false);
   const [showRecommender, setShowRecommender] = useState(false);
+  const [previousRecs, setPreviousRecs] = useState([]);
 
   useEffect(() => {
     loadDemoUsers();
@@ -28,7 +30,7 @@ function Demo() {
   const loadDemoUsers = async () => {
     try {
       const response = await demoAPI.getUsers();
-      const sortedUsers = response.data.users.sort((a, b) => b.activity_count - a.activity_count);
+      const sortedUsers = response.data.sort((a, b) => b.activity_count - a.activity_count);
       setUsers(sortedUsers);
       if (sortedUsers.length > 0) {
         setSelectedUser(sortedUsers[0].user_id);
@@ -47,9 +49,8 @@ function Demo() {
       const response = await demoAPI.getStats();
       setStats(response.data);
       
-      // Also load activities to display (include demo data)
       if (response.data.total_activities > 0) {
-        const activitiesResponse = await activitiesAPI.list(0, 50, true); // include_demo = true
+        const activitiesResponse = await activitiesAPI.list(0, 50, true);
         setActivities(activitiesResponse.data);
       } else {
         setActivities([]);
@@ -75,7 +76,6 @@ function Demo() {
         text: response.data.message
       });
       
-      // Refresh stats and activities
       await loadStats();
     } catch (error) {
       setMessage({
@@ -102,12 +102,12 @@ function Demo() {
         text: 'Demo data cleared successfully'
       });
       
-      // Refresh stats and activities
       await loadStats();
       setActivities([]);
       setSelectedActivity(null);
       setRecommendations([]);
       setShowRecommender(false);
+      setPreviousRecs([]);
     } catch (error) {
       setMessage({
         type: 'error',
@@ -121,16 +121,28 @@ function Demo() {
   const handleSelectActivity = async (activity) => {
     setSelectedActivity(activity);
     setShowRecommender(true);
+    loadRecommendations(activity);
+  };
+
+  const loadRecommendations = async (activity = selectedActivity) => {
+    if (!activity) return;
+    
     setRecLoading(true);
-    setRecommendations([]);
     
     try {
       const response = await recommendAPI.getRecommendations(
         activity.id,
         10,
         strategy,
-        lambdaDiversity
+        lambdaDiversity,
+        excludeSeen,
+        activity.user_id
       );
+      
+      if (recommendations.length > 0) {
+        setPreviousRecs(recommendations.map(r => r.activity_id));
+      }
+      
       setRecommendations(response.data.items || []);
     } catch (error) {
       console.error('Error loading recommendations:', error);
@@ -140,411 +152,473 @@ function Demo() {
     }
   };
 
-  // Reload recommendations when strategy or diversity changes
+  // Reload recommendations when strategy or settings change
   useEffect(() => {
-    const loadRecommendations = async () => {
-      if (!selectedActivity || !showRecommender) return;
-      
-      setRecLoading(true);
-      setRecommendations([]);
-      
-      try {
-        const response = await recommendAPI.getRecommendations(
-          selectedActivity.id,
-          10,
-          strategy,
-          lambdaDiversity
-        );
-        setRecommendations(response.data.items || []);
-      } catch (error) {
-        console.error('Error loading recommendations:', error);
-        setRecommendations([]);
-      } finally {
-        setRecLoading(false);
+    if (selectedActivity && showRecommender) {
+      loadRecommendations();
+    }
+  }, [strategy, lambdaDiversity, excludeSeen]);
+
+  const getStrategyInfo = (strat) => {
+    const info = {
+      content: {
+        name: 'Pure Similarity',
+        icon: <TrendingUp className="h-4 w-4" />,
+        desc: 'Fast baseline using cosine similarity',
+        color: 'blue'
+      },
+      content_mmr: {
+        name: 'Content + Diversity',
+        icon: <Sparkles className="h-4 w-4" />,
+        desc: 'Best ranking quality (MAP & NDCG)',
+        color: 'purple',
+        badge: '⭐ RECOMMENDED'
+      },
+      popularity: {
+        name: 'Popularity-Based',
+        icon: <BarChart3 className="h-4 w-4" />,
+        desc: 'Most popular routes first',
+        color: 'orange'
+      },
+      ensemble: {
+        name: 'Ensemble',
+        icon: <Zap className="h-4 w-4" />,
+        desc: 'Content + Collaborative (future)',
+        color: 'green'
+      },
+      ensemble_mmr: {
+        name: 'Ensemble + Diversity',
+        icon: <Sparkles className="h-4 w-4" />,
+        desc: 'Best coverage/recall (future)',
+        color: 'indigo',
+        badge: 'BEST RECALL'
       }
     };
-    
-    loadRecommendations();
-  }, [selectedActivity, showRecommender, strategy, lambdaDiversity]);
+    return info[strat] || info.content;
+  };
+
+  const newRoutes = recommendations.filter(r => !previousRecs.includes(r.activity_id));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <button
             onClick={() => navigate('/')}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 mb-4"
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 mb-4 transition"
           >
             <ArrowLeft className="h-5 w-5" />
             <span>Back to Dashboard</span>
           </button>
           
-          <div className="flex items-center space-x-3 mb-2">
-            <Sparkles className="h-8 w-8 text-blue-600" />
-            <h1 className="text-4xl font-bold text-gray-900">Demo Mode</h1>
-          </div>
-          <p className="text-lg text-gray-600 mb-2">
-            Load real activity data from CSV to test the recommender system
-          </p>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-900 font-medium mb-1">🎯 How it works:</p>
-            <ul className="text-xs text-blue-800 space-y-1">
-              <li>• <strong>FAISS Index</strong> contains ALL routes from the entire dataset (~638 km of routes)</li>
-              <li>• <strong>Demo Load</strong> adds ONE user's activities to test with (e.g., 50 activities)</li>
-              <li>• <strong>Recommendations</strong> search the ENTIRE index, not just the loaded user's routes</li>
-              <li>• This simulates real-world usage where users see all available routes, not just their own</li>
-            </ul>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center space-x-3 mb-2">
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-2">
+                  <Sparkles className="h-8 w-8 text-white" />
+                </div>
+                <h1 className="text-4xl font-bold text-gray-900">Demo Lab</h1>
+              </div>
+              <p className="text-lg text-gray-600">
+                Test the AI recommender system with real synthetic data
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Controls */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-lg p-6 sticky top-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Load Demo Data</h2>
-
-              {/* Current Stats */}
-              {stats && stats.total_activities > 0 && (
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-sm font-medium text-gray-900 mb-2 flex items-center justify-between">
-                    <span>Current Data</span>
-                    <span className="text-xs text-blue-600 font-normal">(Demo Session)</span>
-                  </div>
-                  <div className="space-y-2 text-sm text-gray-700">
-                    <div className="flex justify-between items-center">
-                      <span>Demo Users:</span>
-                      <span className="font-semibold">{stats.total_users}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Activities Loaded:</span>
-                      <span className="font-semibold">{stats.total_activities}</span>
-                    </div>
-                    <div className="text-xs text-blue-700 mt-2 pt-2 border-t border-blue-300">
-                      These are activities loaded from the selected demo user for testing
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* User Selection */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Users className="h-4 w-4 inline mr-1" />
-                  Select Demo User
-                </label>
-                <select
-                  value={selectedUser}
-                  onChange={(e) => setSelectedUser(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={loading || users.length === 0}
-                >
-                  {users.length === 0 ? (
-                    <option>No users available</option>
-                  ) : (
-                    users.map((user) => (
-                      <option key={user.user_id} value={user.user_id}>
-                        {user.user_id} ({user.activity_count} activities, {formatDistance(user.total_distance)})
-                      </option>
-                    ))
-                  )}
-                </select>
-                {users.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Showing top {users.length} users by activity count
-                  </p>
-                )}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Left Sidebar - Controls */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* User Selection */}
+            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+              <div className="flex items-center space-x-2 mb-4">
+                <Users className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-bold text-gray-900">Load Demo User</h2>
               </div>
 
-              {/* Message */}
-              {message && (
-                <div
-                  className={`mb-4 p-3 rounded-lg flex items-start space-x-2 ${
-                    message.type === 'success'
-                      ? 'bg-green-50 border border-green-200 text-green-800'
-                      : 'bg-red-50 border border-red-200 text-red-800'
-                  }`}
-                >
-                  {message.type === 'success' ? (
-                    <CheckCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                  )}
-                  <p className="text-sm">{message.text}</p>
+              {stats && stats.total_activities > 0 && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-xs font-semibold text-blue-900 mb-2">Current Session</div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Users:</span>
+                      <span className="font-semibold text-gray-900">{stats.total_users}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Activities:</span>
+                      <span className="font-semibold text-gray-900">{stats.total_activities}</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Actions */}
-              <div className="space-y-3">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select User ({users.length} available)
+                  </label>
+                  <select
+                    value={selectedUser}
+                    onChange={(e) => setSelectedUser(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    disabled={loading}
+                  >
+                    {users.length === 0 ? (
+                      <option>No users available</option>
+                    ) : (
+                      users.map((user) => (
+                        <option key={user.user_id} value={user.user_id}>
+                          {user.user_id} ({user.activity_count} activities)
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                {message && (
+                  <div
+                    className={`p-3 rounded-lg flex items-start space-x-2 text-sm ${
+                      message.type === 'success'
+                        ? 'bg-green-50 border border-green-200 text-green-800'
+                        : 'bg-red-50 border border-red-200 text-red-800'
+                    }`}
+                  >
+                    {message.type === 'success' ? (
+                      <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                    )}
+                    <p>{message.text}</p>
+                  </div>
+                )}
+
                 <button
                   onClick={handleLoadDemo}
-                  disabled={loading || !selectedUser || users.length === 0}
-                  className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  disabled={loading || !selectedUser}
+                  className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                 >
                   <Play className="h-5 w-5" />
                   <span>{loading ? 'Loading...' : 'Load Demo Data'}</span>
                 </button>
 
-                <button
-                  onClick={handleClear}
-                  disabled={clearing || !stats || stats.total_activities === 0}
-                  className="w-full flex items-center justify-center space-x-2 bg-red-100 text-red-700 px-4 py-3 rounded-lg hover:bg-red-200 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  <Trash2 className="h-5 w-5" />
-                  <span>{clearing ? 'Clearing...' : 'Clear All Data'}</span>
-                </button>
+                {stats && stats.total_activities > 0 && (
+                  <button
+                    onClick={handleClear}
+                    disabled={clearing}
+                    className="w-full flex items-center justify-center space-x-2 bg-red-50 text-red-700 px-4 py-2 rounded-lg hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed border border-red-200"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>{clearing ? 'Clearing...' : 'Clear Session'}</span>
+                  </button>
+                )}
               </div>
+            </div>
 
-              {/* Tips */}
-              <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-900 font-medium mb-2">💡 Tips:</p>
-                <ul className="text-xs text-blue-800 space-y-1">
-                  <li>• Select users with many activities (10+) for better testing</li>
-                  <li>• Click any activity to see similar routes from the ENTIRE dataset</li>
-                  <li>• Try different strategies (content vs content_mmr) to compare results</li>
-                  <li>• Adjust diversity slider to see how MMR reranking works</li>
-                  <li>• Clear data to test with a different user profile</li>
-                </ul>
-              </div>
+            {/* Info Box */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4">
+              <p className="text-sm text-blue-900 font-semibold mb-2">💡 How it works:</p>
+              <ul className="text-xs text-blue-800 space-y-1.5">
+                <li>• Load a user's activities to test with</li>
+                <li>• Click any activity to see AI recommendations</li>
+                <li>• Try different strategies & diversity levels</li>
+                <li>• Toggle "Hide done routes" for discovery</li>
+              </ul>
             </div>
           </div>
 
-          {/* Right Column: Activities & Recommender */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Activities List */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">
-                  Loaded Activities
-                </h2>
-                {activities.length > 0 && (
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                    {activities.length} {activities.length === 1 ? 'activity' : 'activities'}
-                  </span>
-                )}
-              </div>
-
-              {activities.length === 0 ? (
-                <div className="text-center py-12">
-                  <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No activities loaded yet</p>
-                  <p className="text-sm text-gray-400 mt-2">
-                    Select a user and click "Load Demo Data" to begin
+          {/* Main Content */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Activities Grid */}
+            {activities.length > 0 && (
+              <div className="bg-white rounded-xl shadow-lg border border-gray-100">
+                <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <ActivityIcon className="h-6 w-6 text-blue-600" />
+                      <h2 className="text-xl font-bold text-gray-900">
+                        Loaded Activities
+                      </h2>
+                    </div>
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-bold">
+                      {activities.length} routes
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Click any activity to get AI-powered recommendations
                   </p>
                 </div>
-              ) : (
-                <>
-                  <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-900 font-medium">💡 Click any activity to test recommendations!</p>
-                    <p className="text-xs text-blue-700 mt-1">
-                      The recommender system will find similar activities using FAISS + MMR
-                    </p>
-                    {stats && stats.total_activities > activities.length && (
-                      <p className="text-xs text-blue-600 mt-2 pt-2 border-t border-blue-300">
-                        📋 Showing {activities.length} of {stats.total_activities} total activities (limited for display)
-                      </p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2">
+                
+                <div className="p-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto">
                     {activities.map((activity, index) => {
-                      // Extract meaningful ID parts for display
-                      const activityNum = index + 1;
-                      const idParts = activity.id.split('_');
-                      const routeId = idParts[1] || activityNum;
+                      const routeId = activity.id.split('_')[1] || `#${index + 1}`;
+                      const isSelected = selectedActivity?.id === activity.id;
                       
                       return (
-                        <div
+                        <button
                           key={activity.id}
                           onClick={() => handleSelectActivity(activity)}
-                          className={`p-4 border-2 rounded-lg transition cursor-pointer hover:shadow-md ${
-                            selectedActivity?.id === activity.id
-                              ? 'border-blue-500 bg-blue-50 shadow-md'
-                              : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                          className={`text-left p-4 rounded-lg border-2 transition-all ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-50 shadow-md scale-[1.02]'
+                              : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
                           }`}
                         >
                           <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center space-x-2">
-                              <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                activity.sport === 'running' ? 'bg-orange-100 text-orange-700' :
-                                activity.sport === 'hiking' ? 'bg-green-100 text-green-700' :
-                                activity.sport === 'cycling' ? 'bg-blue-100 text-blue-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {activity.sport?.toUpperCase() || 'ACTIVITY'}
+                            <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+                              activity.sport === 'running' ? 'bg-orange-100 text-orange-700' :
+                              activity.sport === 'cycling' ? 'bg-blue-100 text-blue-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {activity.sport}
+                            </span>
+                            {isSelected && (
+                              <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded font-bold">
+                                ✓ SELECTED
                               </span>
-                              <span className="text-xs font-mono text-gray-500">
-                                #{routeId}
-                              </span>
-                            </div>
-                            {selectedActivity?.id === activity.id && (
-                              <span className="text-blue-600 text-xs font-bold">✓ SELECTED</span>
                             )}
                           </div>
                           
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-2 text-sm">
-                              <span className="font-semibold text-gray-900">
-                                {formatDistance(activity.distance_m)}
-                              </span>
-                              <span className="text-gray-400">•</span>
-                              <span className="text-gray-600">
-                                {formatDuration(activity.duration_s)}
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center space-x-3 text-xs text-gray-500">
-                              {activity.elevation_gain_m > 0 && (
-                                <span className="flex items-center">
-                                  <span className="mr-1">↗</span>
-                                  {Math.round(activity.elevation_gain_m)}m
-                                </span>
-                              )}
-                            </div>
-                            
-                            {/* Activity ID tooltip */}
-                            <div className="text-xs text-gray-400 truncate mt-2 pt-2 border-t border-gray-100" title={activity.id}>
-                              ID: {activity.id.substring(0, 30)}...
-                            </div>
+                          <div className="font-mono font-bold text-gray-900 mb-2">
+                            Route {routeId}
                           </div>
-                        </div>
+                          
+                          <div className="space-y-1 text-sm text-gray-600">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold">📏 {formatDistance(activity.distance_m)}</span>
+                              <span>⏱️ {formatDuration(activity.duration_s)}</span>
+                            </div>
+                            {activity.elevation_gain_m > 0 && (
+                              <div>⛰️ {Math.round(activity.elevation_gain_m)}m elevation</div>
+                            )}
+                          </div>
+                        </button>
                       );
                     })}
                   </div>
-                </>
-              )}
-            </div>
+                </div>
+              </div>
+            )}
 
-            {/* Recommender System Panel */}
+            {/* Recommender Panel */}
             {showRecommender && selectedActivity && (
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="h-6 w-6 text-blue-600" />
-                    <h2 className="text-xl font-bold text-gray-900">Recommendations</h2>
-                  </div>
-                  <button
-                    onClick={() => setShowRecommender(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {/* Selected Activity Info */}
-                <div className="mb-4 p-4 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg">
-                  <div className="text-sm opacity-90 mb-1">Finding similar activities to:</div>
-                  <div className="font-bold capitalize text-lg">{selectedActivity.sport}</div>
-                  <div className="text-sm opacity-90 mt-1">
-                    {formatDistance(selectedActivity.distance_m)} • {formatDuration(selectedActivity.duration_s)}
-                    {selectedActivity.elevation_gain_m > 0 && ` • ↗ ${Math.round(selectedActivity.elevation_gain_m)}m`}
-                  </div>
-                </div>
-
-                {/* Strategy & Diversity Controls */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Settings className="h-4 w-4 inline mr-1" />
-                      Strategy
-                    </label>
-                    <select
-                      value={strategy}
-                      onChange={(e) => setStrategy(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              <div className="bg-white rounded-xl shadow-lg border border-gray-100">
+                <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <TrendingUp className="h-6 w-6 text-purple-600" />
+                      <h2 className="text-xl font-bold text-gray-900">AI Recommendations</h2>
+                    </div>
+                    <button
+                      onClick={() => setShowRecommender(false)}
+                      className="text-gray-400 hover:text-gray-600 text-xl font-bold"
                     >
-                      <option value="content">Pure Similarity (Fast)</option>
-                      <option value="content_mmr">⭐ Content + Diversity (Recommended)</option>
-                      <option value="popularity">Popularity</option>
-                    </select>
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg p-3">
+                    <div className="text-xs opacity-90 mb-1">Finding similar routes to:</div>
+                    <div className="font-bold capitalize text-lg">{selectedActivity.sport} Activity</div>
+                    <div className="text-sm opacity-90 mt-1">
+                      {formatDistance(selectedActivity.distance_m)} • {formatDuration(selectedActivity.duration_s)}
+                    </div>
+                  </div>
+                  
+                  {newRoutes.length > 0 && (
+                    <div className="mt-3 bg-green-50 border border-green-300 rounded-lg px-3 py-2">
+                      <span className="text-sm text-green-800 font-semibold">
+                        ✨ {newRoutes.length} new {newRoutes.length === 1 ? 'route' : 'routes'} discovered!
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Strategy Controls */}
+                <div className="p-5 bg-gray-50 border-b border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
+                        <Settings className="h-4 w-4" />
+                        <span>Recommendation Strategy</span>
+                      </label>
+                      <select
+                        value={strategy}
+                        onChange={(e) => setStrategy(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      >
+                        <option value="content">🎯 Pure Similarity (Fast)</option>
+                        <option value="content_mmr">⭐ Content + Diversity (Best Quality)</option>
+                        <option value="popularity">📊 Popularity-Based</option>
+                        <option value="ensemble">⚡ Ensemble (Coming Soon)</option>
+                        <option value="ensemble_mmr">🔥 Ensemble + Diversity (Coming Soon)</option>
+                      </select>
+                      <div className="mt-1 text-xs text-gray-500">
+                        {getStrategyInfo(strategy).desc}
+                      </div>
+                    </div>
+
+                    {strategy.includes('mmr') && (
+                      <div>
+                        <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
+                          <Sliders className="h-4 w-4" />
+                          <span>Diversity: {lambdaDiversity.toFixed(1)}</span>
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={lambdaDiversity}
+                          onChange={(e) => setLambdaDiversity(parseFloat(e.target.value))}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>Relevance</span>
+                          <span>Balanced</span>
+                          <span>Variety</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {strategy.includes('mmr') && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <Sliders className="h-4 w-4 inline mr-1" />
-                        Diversity: {lambdaDiversity.toFixed(1)}
+                  {selectedActivity?.user_id && (
+                    <div className="mt-4">
+                      <label className="flex items-center space-x-2 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={excludeSeen}
+                          onChange={(e) => setExcludeSeen(e.target.checked)}
+                          className="rounded text-purple-600 focus:ring-2 focus:ring-purple-500"
+                        />
+                        <Filter className="h-4 w-4 text-gray-500 group-hover:text-purple-600 transition" />
+                        <span className="text-sm text-gray-700 font-medium">
+                          Hide routes I've already done
+                        </span>
                       </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        value={lambdaDiversity}
-                        onChange={(e) => setLambdaDiversity(parseFloat(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>Relevance</span>
-                        <span>Balanced</span>
-                        <span>Variety</span>
-                      </div>
                     </div>
                   )}
                 </div>
 
                 {/* Recommendations List */}
-                {recLoading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                  </div>
-                ) : recommendations.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                    <p>No recommendations found</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-xs text-green-800">
-                        ✨ <strong>Searching entire route database:</strong> These recommendations come from ALL routes in the system, 
-                        not just the loaded user's activities. This demonstrates how FAISS searches across the full dataset.
-                      </p>
+                <div className="p-5">
+                  {recLoading ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+                      <p className="text-gray-600">Finding best matches...</p>
                     </div>
-                    <div className="text-sm font-medium text-gray-700 mb-2">
-                      Top {recommendations.length} Similar Routes from Entire Dataset:
+                  ) : recommendations.length === 0 ? (
+                    <div className="text-center py-12">
+                      <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 font-medium">No recommendations found</p>
+                      <p className="text-gray-400 text-sm mt-1">Try adjusting your filters</p>
                     </div>
-                    {recommendations.map((rec, index) => (
-                      <div
-                        key={rec.activity_id}
-                        className="p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <span className="flex items-center justify-center w-7 h-7 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-bold rounded-full">
-                              {index + 1}
-                            </span>
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {rec.activity_id}
-                              </div>
-                              <div className="text-xs text-gray-500 mt-0.5">
-                                Match Score: {(rec.score * 100).toFixed(1)}%
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="w-24 bg-gray-200 rounded-full h-2">
-                              <div
-                                className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all"
-                                style={{ width: `${rec.score * 100}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="text-sm font-semibold text-gray-700 mb-3">
+                        Top {recommendations.length} Similar Routes:
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {recommendations.map((rec, index) => {
+                        const isNew = !previousRecs.includes(rec.activity_id);
+                        const scorePercent = (rec.score * 100).toFixed(1);
+                        
+                        return (
+                          <div
+                            key={`${rec.activity_id}-${index}`}
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              isNew 
+                                ? 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50' 
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3 flex-1">
+                                <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ${
+                                  isNew ? 'bg-gradient-to-br from-green-500 to-emerald-600' :
+                                  index === 0 ? 'bg-gradient-to-br from-yellow-500 to-orange-500' :
+                                  'bg-gradient-to-br from-blue-500 to-purple-500'
+                                }`}>
+                                  {index + 1}
+                                </span>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center space-x-2 mb-1">
+                                    <span className="font-mono font-bold text-gray-900">
+                                      {rec.activity_id}
+                                    </span>
+                                    {isNew && (
+                                      <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full font-bold">
+                                        NEW
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  {rec.metadata && (
+                                    <div className="flex items-center space-x-3 text-xs text-gray-600">
+                                      {rec.metadata.distance_km && (
+                                        <span>📏 {rec.metadata.distance_km.toFixed(1)}km</span>
+                                      )}
+                                      {rec.metadata.surface_type && (
+                                        <span>🛤️ {rec.metadata.surface_type}</span>
+                                      )}
+                                      {rec.metadata.elevation_m > 0 && (
+                                        <span>⛰️ {Math.round(rec.metadata.elevation_m)}m</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="text-right ml-4">
+                                <div className="text-sm font-bold text-gray-900">
+                                  {scorePercent}%
+                                </div>
+                                <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
+                                  <div
+                                    className={`h-2 rounded-full transition-all ${
+                                      isNew ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 
+                                      'bg-gradient-to-r from-blue-500 to-purple-500'
+                                    }`}
+                                    style={{ width: `${Math.min(100, rec.score * 100)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-                {/* Footer Info */}
-                <div className="mt-6 pt-4 border-t border-gray-100">
-                  <div className="flex items-center space-x-2 text-xs text-gray-500">
-                    <TrendingUp className="h-4 w-4" />
-                    <span>
-                      Using FAISS vector search
-                      {strategy.includes('mmr') && ` + MMR reranking (λ=${lambdaDiversity})`}
+                {/* Footer */}
+                <div className="p-4 bg-gray-50 border-t border-gray-200">
+                  <div className="flex items-center justify-between text-xs text-gray-600">
+                    <span className="font-semibold">
+                      ⚡ FAISS Vector Search {strategy.includes('mmr') && `+ MMR (λ=${lambdaDiversity})`}
+                    </span>
+                    <span className="font-mono bg-white px-2 py-1 rounded border border-gray-200">
+                      {strategy}
                     </span>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {activities.length === 0 && (
+              <div className="bg-white rounded-xl shadow-lg p-12 text-center border border-gray-100">
+                <div className="max-w-md mx-auto">
+                  <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                    <Users className="h-12 w-12 text-blue-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                    Ready to Test?
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Select a demo user and click "Load Demo Data" to start exploring AI-powered route recommendations.
+                  </p>
                 </div>
               </div>
             )}
