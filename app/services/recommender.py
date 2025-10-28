@@ -5,6 +5,8 @@ from sklearn.preprocessing import StandardScaler
 from .feature_store import load_csv_features, FEATURE_COLUMNS
 from .mmr_reranker import mmr_rerank, calculate_diversity_score
 from ..config import settings
+from ..cache import cache, collab_cache_key, recommendation_cache_key
+import time
 
 INDEX_PATH = os.path.join(settings.recsys_index_dir, "index_latest.faiss")
 SCALER_PATH = os.path.join(settings.recsys_index_dir, "scaler.npy")
@@ -241,6 +243,7 @@ class Recommender:
         """
         Compute collaborative filtering scores based on user-item interactions.
         Uses item-item collaborative filtering (routes that are done together).
+        WITH CACHING for performance.
         
         Args:
             query_route_id: The route to find similar routes for
@@ -252,6 +255,16 @@ class Recommender:
         """
         if self.user_route_matrix is None or self.route_to_matrix_idx is None:
             return {}
+        
+        # Check cache first
+        cache_key = collab_cache_key(query_route_id)
+        cached_scores = cache.get(cache_key)
+        if cached_scores is not None:
+            print(f"   📦 Cache HIT for collaborative scores: {query_route_id}")
+            return cached_scores
+        
+        print(f"   ⏱️  Cache MISS, computing collaborative scores...")
+        start_time = time.time()
         
         # Get the query route index
         if query_route_id not in self.route_to_matrix_idx:
@@ -285,6 +298,12 @@ class Recommender:
         for route_id, route_idx in self.route_to_matrix_idx.items():
             if route_id != query_route_id:
                 scores[route_id] = float(similarities[route_idx])
+        
+        # Cache for 30 minutes (collaborative scores don't change often)
+        cache.set(cache_key, scores, ttl=1800)
+        
+        elapsed = time.time() - start_time
+        print(f"   ✅ Collaborative scores computed in {elapsed:.3f}s (cached for 30min)")
         
         return scores
 

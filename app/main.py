@@ -6,14 +6,36 @@ from .db import Base, engine
 from .routers import health, activities, recommend, users, demo, social, location
 from .services.recommender import recsys
 from .services.scheduler import start as start_scheduler
+from .middleware import RateLimitMiddleware, RequestLoggingMiddleware, SecurityHeadersMiddleware
+from .cache import cache
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Strava Recommender System",
-    description="Multi-strategy recommender system with FAISS + MMR",
-    version="1.0.0"
+    description="Multi-strategy recommender system with FAISS + MMR + JWT + Analytics",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
-# Add CORS middleware
+# Add middleware (order matters - they execute in reverse order)
+# 1. Security headers (first to apply)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 2. Request logging
+app.add_middleware(RequestLoggingMiddleware)
+
+# 3. Rate limiting (100 requests per minute)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
+
+# 4. CORS (last to apply)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # In production, specify actual origins
@@ -22,7 +44,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# mount routers
+# Import new routers
+from .routers import export, analytics, notifications
+
+# Mount routers
 app.include_router(health)
 app.include_router(users)
 app.include_router(activities)
@@ -30,6 +55,9 @@ app.include_router(recommend)
 app.include_router(demo)
 app.include_router(social)
 app.include_router(location)
+app.include_router(export)
+app.include_router(analytics)
+app.include_router(notifications)
 
 def init_db_with_retry(max_retries=5, retry_delay=2):
     """Initialize database with retry logic for container startup."""
@@ -50,21 +78,43 @@ def init_db_with_retry(max_retries=5, retry_delay=2):
 @app.on_event("startup")
 def on_startup():
     """Initialize the application - load trained model and build FAISS index."""
-    print("🚀 Starting Strava Recommender System...")
+    logger.info("🚀 Starting Strava Recommender System v2.0...")
     
     # Initialize database tables
     init_db_with_retry()
     
+    # Test cache connection
+    cache_stats = cache.get_stats()
+    if cache_stats.get("enabled"):
+        logger.info(f"✅ Redis cache connected")
+    else:
+        logger.warning("⚠️  Redis cache not available (using in-memory only)")
+    
     # Initialize recommender (loads trained model if available, otherwise builds from CSV)
-    print("🔨 Loading recommender...")
+    logger.info("🔨 Loading recommender system...")
     recsys.ensure_ready()
     
     # Start background scheduler
-    print("⏰ Starting background scheduler...")
+    logger.info("⏰ Starting background scheduler...")
     start_scheduler()
-    print("✅ Scheduler started!")
+    logger.info("✅ Scheduler started!")
     
-    print("\n🎉 Strava Recommender System is ready!")
-    print(f"   📊 API Docs: http://localhost:8080/docs")
-    print(f"   🎨 Frontend: http://localhost:3000\n")
+    logger.info("\n" + "="*60)
+    logger.info("🎉 Strava Recommender System v2.0 is ready!")
+    logger.info("="*60)
+    logger.info("Features Enabled:")
+    logger.info("  ✅ JWT Authentication with Refresh Tokens")
+    logger.info("  ✅ Email Verification & Password Reset")
+    logger.info("  ✅ User Preferences & Settings")
+    logger.info("  ✅ A/B Testing Framework")
+    logger.info("  ✅ Redis Caching (Collaborative Filtering)")
+    logger.info("  ✅ Rate Limiting (100 req/min)")
+    logger.info("  ✅ Recommendation Analytics")
+    logger.info("  ✅ Activity Export (GPX/TCX/JSON)")
+    logger.info("  ✅ Ensemble Strategies (Content + Collaborative)")
+    logger.info("  ✅ Real-time Notifications (WebSocket)")
+    logger.info("="*60)
+    logger.info(f"📊 API Docs: http://localhost:8000/docs")
+    logger.info(f"🎨 Frontend: http://localhost:3000")
+    logger.info("="*60 + "\n")
 

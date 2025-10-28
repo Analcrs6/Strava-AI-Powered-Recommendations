@@ -18,6 +18,11 @@ class Settings(BaseModel):
     recsys_k: int = int(os.getenv("RECSYS_K", "20"))
     recsys_metric: str = os.getenv("RECSYS_METRIC", "cosine")
 
+    # Redis
+    redis_host: str = os.getenv("REDIS_HOST", "redis")
+    redis_port: int = int(os.getenv("REDIS_PORT", "6379"))
+    redis_db: int = int(os.getenv("REDIS_DB", "0"))
+    
     # Seed
     csv_seed_path: str = os.getenv("CSV_SEED_PATH", "/workspace/app/resources/synthetic_strava_data.csv")
     

@@ -7,11 +7,10 @@ ENV PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
 
 # deps
-COPY app/pyproject.toml /tmp/pyproject.toml
+COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir uv && \
-    python -c "from pathlib import Path; import tomllib; p = tomllib.loads(Path('/tmp/pyproject.toml').read_text()); print('\n'.join(p['project']['dependencies']))" > /tmp/requirements.txt && \
     uv pip install --system -r /tmp/requirements.txt && \
-    rm /tmp/requirements.txt /tmp/pyproject.toml
+    rm /tmp/requirements.txt
 
 # Setup app directory
 WORKDIR /workspace

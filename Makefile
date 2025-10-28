@@ -6,6 +6,7 @@ help:
 	@echo ""
 	@echo "Setup & Run:"
 	@echo "  make build          - Build all Docker images (backend + frontend)"
+	@echo "  make rebuild        - Build without cache (use if changes not picked up)"
 	@echo "  make up             - Start all services"
 	@echo "  make down           - Stop all services"
 	@echo "  make restart        - Restart all services"
@@ -34,6 +35,10 @@ help:
 # Build the Docker images
 build:
 	sudo docker compose build
+
+# Build without cache (use when code changes aren't picked up)
+rebuild:
+	sudo docker compose build --no-cache
 
 # Start all services
 up:
