@@ -47,5 +47,22 @@ export const demoAPI = {
   getStats: () => api.get('/demo/stats'),
 };
 
+export const socialAPI = {
+  getProfile: (userId, currentUserId = null) => 
+    api.get(`/social/users/${userId}/profile`, { params: { current_user_id: currentUserId } }),
+  getFollowers: (userId, skip = 0, limit = 50) =>
+    api.get(`/social/users/${userId}/followers`, { params: { skip, limit } }),
+  getFollowing: (userId, skip = 0, limit = 50) =>
+    api.get(`/social/users/${userId}/following`, { params: { skip, limit } }),
+  follow: (userId, targetUserId) =>
+    api.post('/social/follow', { user_id: userId, target_user_id: targetUserId }),
+  unfollow: (userId, targetUserId) =>
+    api.post('/social/unfollow', { user_id: userId, target_user_id: targetUserId }),
+  getSuggestions: (userId, limit = 10) =>
+    api.get('/social/suggestions', { params: { user_id: userId, limit } }),
+  updateProfile: (userId, data) =>
+    api.put(`/social/users/${userId}/profile`, null, { params: data }),
+};
+
 export default api;
 

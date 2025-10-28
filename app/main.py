@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
 from .db import Base, engine
-from .routers import health, activities, recommend, users, demo
+from .routers import health, activities, recommend, users, demo, social
 from .services.recommender import recsys
 from .services.scheduler import start as start_scheduler
 
@@ -28,6 +28,7 @@ app.include_router(users)
 app.include_router(activities)
 app.include_router(recommend)
 app.include_router(demo)
+app.include_router(social)
 
 def init_db_with_retry(max_retries=5, retry_delay=2):
     """Initialize database with retry logic for container startup."""

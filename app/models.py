@@ -1,13 +1,23 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
+from datetime import datetime
 from .db import Base
 
 class User(Base):
     __tablename__ = "users"
     id = Column(String, primary_key=True)
     name = Column(String)
+    email = Column(String, nullable=True)
+    bio = Column(Text, nullable=True)
+    location = Column(String, nullable=True)
+    profile_image_url = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
     demo_session_id = Column(String, nullable=True)  # Track demo data
+    
+    # Relationships
+    followers = relationship("Follow", foreign_keys="Follow.followed_id", back_populates="followed_user", cascade="all, delete-orphan")
+    following = relationship("Follow", foreign_keys="Follow.follower_id", back_populates="follower_user", cascade="all, delete-orphan")
 
 class Activity(Base):
     __tablename__ = "activities"
@@ -21,4 +31,18 @@ class Activity(Base):
     hr_avg = Column(Float, nullable=True)
     features = Column(JSONB, nullable=True)  # store raw feature dict for now
     demo_session_id = Column(String, nullable=True)  # Track demo data
+
+
+class Follow(Base):
+    """User follow relationships (like Instagram followers/following)"""
+    __tablename__ = "follows"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    follower_id = Column(String, ForeignKey("users.id"), nullable=False)  # Who is following
+    followed_id = Column(String, ForeignKey("users.id"), nullable=False)  # Who is being followed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    follower_user = relationship("User", foreign_keys=[follower_id], back_populates="following")
+    followed_user = relationship("User", foreign_keys=[followed_id], back_populates="followers")
 

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { Activity, TrendingUp, Plus, Home, Sparkles, Navigation } from 'lucide-react';
+import { Activity, TrendingUp, Plus, Home, Sparkles, Navigation, User } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CreateActivity from './pages/CreateActivity';
 import ActivityDetail from './pages/ActivityDetail';
 import Demo from './pages/Demo';
 import RecordActivity from './pages/RecordActivity';
+import UserProfile from './pages/UserProfile';
 
 function App() {
   return (
@@ -64,6 +65,7 @@ function App() {
             <Route path="/record" element={<RecordActivity />} />
             <Route path="/activity/:id" element={<ActivityDetail />} />
             <Route path="/demo" element={<Demo />} />
+            <Route path="/profile/:userId" element={<UserProfile />} />
           </Routes>
         </main>
 
