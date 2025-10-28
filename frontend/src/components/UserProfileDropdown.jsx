@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Settings, LogOut, Activity, Users, Bell, MessageSquare } from 'lucide-react';
+import { User, Settings, LogOut, Activity, Users, Bell, MessageSquare, MapPin } from 'lucide-react';
 
 function UserProfileDropdown() {
   const navigate = useNavigate();
@@ -133,6 +133,17 @@ function UserProfileDropdown() {
             >
               <Users className="h-4 w-4" />
               <span>Following</span>
+            </button>
+
+            <button
+              onClick={() => {
+                navigate('/nearby');
+                setIsOpen(false);
+              }}
+              className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
+            >
+              <MapPin className="h-4 w-4" />
+              <span>Nearby Friends</span>
             </button>
 
             <button

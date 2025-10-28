@@ -15,6 +15,12 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     demo_session_id = Column(String, nullable=True)  # Track demo data
     
+    # Real-time location sharing for mutual followers
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    last_location_update = Column(DateTime, nullable=True)
+    location_sharing_enabled = Column(Boolean, default=False)
+    
     # Relationships
     followers = relationship("Follow", foreign_keys="Follow.followed_id", back_populates="followed_user", cascade="all, delete-orphan")
     following = relationship("Follow", foreign_keys="Follow.follower_id", back_populates="follower_user", cascade="all, delete-orphan")

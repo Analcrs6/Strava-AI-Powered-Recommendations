@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import Following from './pages/Following';
 import Notifications from './pages/Notifications';
 import Messages from './pages/Messages';
+import NearbyFollowers from './pages/NearbyFollowers';
 import UserProfileDropdown from './components/UserProfileDropdown';
 
 function AppContent() {
@@ -96,6 +97,7 @@ function AppContent() {
           <Route path="/my-activities" element={<Dashboard />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/messages" element={<Messages />} />
+          <Route path="/nearby" element={<NearbyFollowers />} />
         </Routes>
       </main>
 

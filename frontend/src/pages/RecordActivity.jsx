@@ -227,9 +227,9 @@ function RecordActivity() {
     : 0;
 
   return (
-    <div className="h-screen flex flex-col bg-gray-900">
+    <div className="h-screen flex flex-col bg-gray-900 fixed inset-0 z-50">
       {/* Compact Header */}
-      <div className="bg-gray-800 border-b border-gray-700">
+      <div className="bg-gray-800 border-b border-gray-700 flex-shrink-0">
         <div className="px-6 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Navigation className="h-6 w-6 text-orange-500" />
@@ -245,9 +245,9 @@ function RecordActivity() {
       </div>
 
       {/* Main Content - Full Height */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Map - Takes full width */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-h-0">
           <MapContainer 
                   center={mapCenter} 
                   zoom={16} 

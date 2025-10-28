@@ -4,4 +4,5 @@ from .recommend import router as recommend
 from .users import router as users
 from .demo import router as demo
 from .social import router as social
+from .location import router as location
 
