@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { Activity, TrendingUp, Plus, Home, Sparkles } from 'lucide-react';
+import { Activity, TrendingUp, Plus, Home, Sparkles, Navigation } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import CreateActivity from './pages/CreateActivity';
 import ActivityDetail from './pages/ActivityDetail';
 import Demo from './pages/Demo';
+import RecordActivity from './pages/RecordActivity';
 
 function App() {
   return (
@@ -37,6 +38,13 @@ function App() {
                   <span>New Activity</span>
                 </Link>
                 <Link 
+                  to="/record" 
+                  className="flex items-center space-x-1 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition"
+                >
+                  <Navigation className="h-5 w-5" />
+                  <span>Record</span>
+                </Link>
+                <Link 
                   to="/demo" 
                   className="flex items-center space-x-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                 >
@@ -53,6 +61,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/create" element={<CreateActivity />} />
+            <Route path="/record" element={<RecordActivity />} />
             <Route path="/activity/:id" element={<ActivityDetail />} />
             <Route path="/demo" element={<Demo />} />
           </Routes>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { activitiesAPI } from '../services/api';
-import { Save, X, Activity } from 'lucide-react';
+import { Save, X, Activity, Navigation, Edit } from 'lucide-react';
 
 function CreateActivity() {
   const navigate = useNavigate();
@@ -54,10 +54,46 @@ function CreateActivity() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white rounded-xl shadow-sm p-8">
+      {/* Method Selection Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <button
+          onClick={() => navigate('/record')}
+          className="bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl p-8 text-left shadow-lg hover:shadow-xl hover:scale-105 transition-all group"
+        >
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3 group-hover:bg-white/30 transition">
+              <Navigation className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">Record Activity</h2>
+          </div>
+          <p className="text-orange-100 mb-4">
+            Track your workout in real-time with GPS mapping, live stats, and automatic distance calculation.
+          </p>
+          <span className="inline-block bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-semibold">
+            🎯 Recommended
+          </span>
+        </button>
+
+        <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-lg">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="bg-gray-100 rounded-xl p-3">
+              <Edit className="h-8 w-8 text-gray-700" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Manual Entry</h2>
+          </div>
+          <p className="text-gray-600 mb-4">
+            Enter activity details manually if you already have the data or prefer not to use GPS tracking.
+          </p>
+          <span className="inline-block bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-semibold">
+            ⌨️ Fill form below
+          </span>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
         <div className="flex items-center space-x-3 mb-8">
           <Activity className="h-8 w-8 text-strava-orange" />
-          <h1 className="text-3xl font-bold text-gray-900">Create New Activity</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Manual Activity Entry</h1>
         </div>
 
         {error && (
