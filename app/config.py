@@ -13,6 +13,13 @@ class Settings(BaseModel):
     pg_host: str = os.getenv("POSTGRES_HOST", "db")
     pg_port: str = os.getenv("POSTGRES_PORT", "5432")
 
+    # Demo DB
+    pg_demo_user: str = os.getenv("POSTGRES_DEMO_USER", "strava_demo")
+    pg_demo_pass: str = os.getenv("POSTGRES_DEMO_PASSWORD", "strava_demo")
+    pg_demo_db: str = os.getenv("POSTGRES_DEMO_DB", "strava_demo")
+    pg_demo_host: str = os.getenv("POSTGRES_DEMO_HOST", "db-demo")
+    pg_demo_port: str = os.getenv("POSTGRES_DEMO_PORT", "5432")
+
     # Recsys
     recsys_index_dir: str = os.getenv("RECSYS_INDEX_DIR", "/data/recsys")
     recsys_k: int = int(os.getenv("RECSYS_K", "20"))
@@ -32,6 +39,10 @@ class Settings(BaseModel):
     @property
     def database_url(self) -> str:
         return f"postgresql://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_db}"
+
+    @property
+    def demo_database_url(self) -> str:
+        return f"postgresql://{self.pg_demo_user}:{self.pg_demo_pass}@{self.pg_demo_host}:{self.pg_demo_port}/{self.pg_demo_db}"
 
 settings = Settings()
 

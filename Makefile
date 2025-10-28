@@ -16,7 +16,8 @@ help:
 	@echo "  make logs-app       - View backend logs only"
 	@echo "  make logs-frontend  - View frontend logs only"
 	@echo "  make shell-app      - Open shell in app container"
-	@echo "  make shell-db       - Open psql shell in database"
+	@echo "  make shell-db       - Open psql shell in main database"
+	@echo "  make shell-db-demo  - Open psql shell in demo database"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make health         - Check health endpoint"
@@ -96,6 +97,10 @@ shell-app:
 # Open psql shell
 shell-db:
 	sudo docker exec -it db psql -U strava -d strava
+
+# Open demo psql shell
+shell-db-demo:
+	sudo docker exec -it db-demo psql -U strava_demo -d strava_demo
 
 # Clean up (remove volumes)
 clean:

@@ -2,8 +2,8 @@ import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
-from .db import Base, engine
-from .routers import health, activities, recommend, users, demo, social, location
+from .db import Base, engine, demo_engine
+from .routers import health, activities, recommend, users, demo, social, location, export, analytics, notifications
 from .services.recommender import recsys
 from .services.scheduler import start as start_scheduler
 from .middleware import RateLimitMiddleware, RequestLoggingMiddleware, SecurityHeadersMiddleware
@@ -44,9 +44,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Import new routers
-from .routers import export, analytics, notifications
-
 # Mount routers
 app.include_router(health)
 app.include_router(users)
@@ -60,19 +57,35 @@ app.include_router(analytics)
 app.include_router(notifications)
 
 def init_db_with_retry(max_retries=5, retry_delay=2):
-    """Initialize database with retry logic for container startup."""
+    """Initialize databases with retry logic for container startup."""
+    # Initialize main database
     for attempt in range(max_retries):
         try:
-            print(f"🗄️  Attempting to connect to database (attempt {attempt + 1}/{max_retries})...")
+            print(f"🗄️  Attempting to connect to MAIN database (attempt {attempt + 1}/{max_retries})...")
             Base.metadata.create_all(bind=engine)
-            print("✅ Database tables created successfully!")
-            return
+            print("✅ Main database tables created successfully!")
+            break
         except OperationalError as e:
             if attempt < max_retries - 1:
-                print(f"⚠️  Database not ready yet, retrying in {retry_delay} seconds...")
+                print(f"⚠️  Main database not ready yet, retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
             else:
-                print(f"❌ Failed to connect to database after {max_retries} attempts")
+                print(f"❌ Failed to connect to main database after {max_retries} attempts")
+                raise
+    
+    # Initialize demo database (same schema, different database)
+    for attempt in range(max_retries):
+        try:
+            print(f"🗄️  Attempting to connect to DEMO database (attempt {attempt + 1}/{max_retries})...")
+            Base.metadata.create_all(bind=demo_engine)
+            print("✅ Demo database tables created successfully!")
+            break
+        except OperationalError as e:
+            if attempt < max_retries - 1:
+                print(f"⚠️  Demo database not ready yet, retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                print(f"❌ Failed to connect to demo database after {max_retries} attempts")
                 raise
 
 @app.on_event("startup")

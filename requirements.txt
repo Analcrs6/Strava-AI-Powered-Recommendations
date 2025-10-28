@@ -30,6 +30,7 @@ httpx==0.25.2
 requests==2.31.0
 
 # Background Tasks & Email
+apscheduler==3.10.4  # Background scheduling
 celery==5.3.4  # For background jobs
 sendgrid==6.10.0  # Email service (optional)
 
