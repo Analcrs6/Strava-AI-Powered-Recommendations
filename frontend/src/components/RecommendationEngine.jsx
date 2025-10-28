@@ -62,36 +62,36 @@ function RecommendationEngine({ selectedActivity, userId = null, compact = false
   const newRoutes = recommendations.filter(r => !previousRecs.includes(r.activity_id));
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-4">
+      <div className="p-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-2 text-white">
-            <TrendingUp className="h-5 w-5" />
-            <h3 className="font-bold text-lg">AI Recommendations</h3>
+          <div className="flex items-center space-x-2">
+            <TrendingUp className="h-5 w-5 text-blue-600" />
+            <h3 className="font-bold text-gray-900">Recommendations</h3>
           </div>
-          <span className="text-xs bg-white/20 backdrop-blur-sm px-2 py-1 rounded-full text-white font-semibold">
+          <span className="text-xs text-gray-500">
             {recommendations.length} routes
           </span>
         </div>
 
         {/* Selected Activity Info */}
-        <div className="text-sm text-purple-100">
-          Finding similar to: <span className="font-bold capitalize text-white">{selectedActivity.sport}</span>
+        <div className="text-xs text-gray-600">
+          Finding similar to: <span className="font-semibold capitalize">{selectedActivity.sport}</span>
           {' • '}
-          {selectedActivity.distance_m && <span className="text-white font-semibold">{formatDistance(selectedActivity.distance_m)}</span>}
+          {selectedActivity.distance_m && formatDistance(selectedActivity.distance_m)}
         </div>
 
         {/* Change Indicator */}
         {newRoutes.length > 0 && (
-          <div className="mt-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg px-3 py-2 text-sm text-white font-semibold">
-            ✨ {newRoutes.length} new {newRoutes.length === 1 ? 'route' : 'routes'} discovered!
+          <div className="mt-2 bg-green-50 border border-green-200 rounded px-3 py-1.5 text-xs text-green-800 font-semibold">
+            {newRoutes.length} new {newRoutes.length === 1 ? 'route' : 'routes'}
           </div>
         )}
       </div>
 
       {/* Controls */}
-      <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50 border-b border-gray-200 space-y-3">
+      <div className="p-4 bg-white border-b border-gray-200 space-y-3">
         {/* Strategy */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -101,7 +101,7 @@ function RecommendationEngine({ selectedActivity, userId = null, compact = false
           <select
             value={strategy}
             onChange={(e) => setStrategy(e.target.value)}
-            className="w-full text-sm px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+            className="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="content">Pure Similarity</option>
             <option value="content_mmr">⭐ Content + Diversity (Best)</option>
@@ -123,7 +123,7 @@ function RecommendationEngine({ selectedActivity, userId = null, compact = false
               step="0.1"
               value={lambdaDiversity}
               onChange={(e) => setLambdaDiversity(parseFloat(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+              className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-0.5">
               <span>Relevance</span>
@@ -139,15 +139,15 @@ function RecommendationEngine({ selectedActivity, userId = null, compact = false
               type="checkbox"
               checked={excludeSeen}
               onChange={(e) => setExcludeSeen(e.target.checked)}
-              className="rounded text-purple-600 focus:ring-2 focus:ring-purple-500"
+              className="rounded text-blue-600 focus:ring-2 focus:ring-blue-500"
             />
-            <span className="text-sm text-gray-700 font-medium">🚫 Hide routes I've done</span>
+            <span className="text-xs text-gray-700">Hide routes I've done</span>
           </label>
         )}
       </div>
 
       {/* Recommendations List */}
-      <div className="p-4 max-h-96 overflow-y-auto bg-gray-50">
+      <div className="p-4 max-h-96 overflow-y-auto">
         {loading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -165,16 +165,16 @@ function RecommendationEngine({ selectedActivity, userId = null, compact = false
               return (
                 <div
                   key={`${rec.activity_id}-${index}`}
-                  className={`p-3 rounded-xl border-2 transition-all transform ${
-                    isNew ? 'border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 shadow-md' : 'border-gray-200 bg-white'
-                  } hover:shadow-lg hover:scale-102`}
+                  className={`p-3 rounded-lg border transition-all ${
+                    isNew ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'
+                  } hover:shadow-sm`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-2 flex-1">
-                      <span className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md ${
-                        isNew ? 'bg-gradient-to-br from-green-400 to-emerald-500' : 
-                        index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500' : 
-                        'bg-gradient-to-br from-blue-500 to-purple-500'
+                      <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                        isNew ? 'bg-green-500' : 
+                        index === 0 ? 'bg-yellow-500' : 
+                        'bg-blue-500'
                       }`}>
                         {index + 1}
                       </span>
@@ -184,8 +184,8 @@ function RecommendationEngine({ selectedActivity, userId = null, compact = false
                             {rec.activity_id}
                           </span>
                           {isNew && (
-                            <span className="text-xs bg-gradient-to-r from-green-500 to-emerald-500 text-white px-2 py-1 rounded-full font-bold shadow-sm">
-                              ✨ NEW
+                            <span className="text-xs bg-green-500 text-white px-1.5 py-0.5 rounded font-semibold">
+                              NEW
                             </span>
                           )}
                         </div>
@@ -210,10 +210,10 @@ function RecommendationEngine({ selectedActivity, userId = null, compact = false
                       <div className="text-xs font-semibold text-gray-700">
                         {scorePercent}%
                       </div>
-                      <div className="w-16 bg-gray-200 rounded-full h-2 mt-1">
+                      <div className="w-16 bg-gray-200 rounded-full h-1.5 mt-1">
                         <div
-                          className={`h-2 rounded-full ${
-                            isNew ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-gradient-to-r from-blue-500 to-purple-500'
+                          className={`h-1.5 rounded-full ${
+                            isNew ? 'bg-green-500' : 'bg-blue-500'
                           }`}
                           style={{ width: `${Math.min(100, rec.score * 100)}%` }}
                         />
@@ -228,10 +228,10 @@ function RecommendationEngine({ selectedActivity, userId = null, compact = false
       </div>
 
       {/* Footer */}
-      <div className="p-3 bg-gradient-to-r from-gray-100 to-blue-100 border-t border-gray-200 text-xs text-gray-700">
+      <div className="p-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-600">
         <div className="flex items-center justify-between">
-          <span className="font-semibold">⚡ FAISS {strategy.includes('mmr') && '+ MMR Reranking'}</span>
-          <span className="font-mono bg-white px-2 py-1 rounded">{strategy}</span>
+          <span>FAISS {strategy.includes('mmr') && '+ MMR'}</span>
+          <span className="font-mono">{strategy}</span>
         </div>
       </div>
     </div>

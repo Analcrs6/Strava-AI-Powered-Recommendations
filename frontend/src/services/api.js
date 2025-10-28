@@ -42,8 +42,8 @@ export const usersAPI = {
 
 export const demoAPI = {
   getUsers: () => api.get('/demo/users'),
-  loadUser: (userId) => api.post('/demo/load', { user_id: userId }),
-  clearData: () => api.post('/demo/clear'),
+  loadData: (userId) => api.post('/demo/load', { user_id: userId }),
+  clearSession: (sessionId) => api.post('/demo/clear', { session_id: sessionId }),
   getStats: () => api.get('/demo/stats'),
 };
 
