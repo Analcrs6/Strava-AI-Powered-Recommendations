@@ -8,7 +8,8 @@ class User(Base):
     __tablename__ = "users"
     id = Column(String, primary_key=True)
     name = Column(String)
-    email = Column(String, nullable=True)
+    email = Column(String, unique=True, nullable=True, index=True)
+    password_hash = Column(String, nullable=True)  # For email/password authentication
     bio = Column(Text, nullable=True)
     location = Column(String, nullable=True)
     profile_image_url = Column(String, nullable=True)
@@ -28,7 +29,7 @@ class User(Base):
 class Activity(Base):
     __tablename__ = "activities"
     id = Column(String, primary_key=True)
-    user_id = Column(String, nullable=True)  # Made nullable - no FK constraint for flexibility
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # Cascade delete when user is deleted
     sport = Column(String)
     started_at = Column(DateTime, nullable=True)
     duration_s = Column(Float)
@@ -37,6 +38,7 @@ class Activity(Base):
     hr_avg = Column(Float, nullable=True)
     features = Column(JSONB, nullable=True)  # store raw feature dict for now
     demo_session_id = Column(String, nullable=True)  # Track demo data
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Follow(Base):

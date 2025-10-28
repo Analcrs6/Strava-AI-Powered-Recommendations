@@ -101,36 +101,37 @@ function Signup() {
     setLoading(true);
     
     try {
-      // Create user in database first
-      const userId = `user_${Date.now()}`;
-      
-      const response = await fetch('/api/users', {
+      // Register user with backend
+      const response = await fetch('/api/users/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: userId,
-          name: formData.name
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          location: formData.location || null
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create user');
+        throw new Error(errorData.detail || 'Failed to create account');
       }
 
       const userData = await response.json();
       
-      const newUser = {
+      const user = {
         id: userData.id,
         name: userData.name,
-        email: formData.email,
-        location: formData.location,
-        profile_image_url: null,
+        email: userData.email,
+        bio: userData.bio,
+        location: userData.location,
+        profile_image_url: userData.profile_image_url,
         provider: 'email'
       };
       
-      login(newUser);
-      console.log('✅ User created with email signup:', userId);
+      login(user);
+      console.log('✅ User created:', userData.id, '(' + userData.name + ')');
       navigate('/');
     } catch (err) {
       console.error('Signup error:', err);

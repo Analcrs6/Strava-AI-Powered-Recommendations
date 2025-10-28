@@ -32,6 +32,10 @@ class Recommender:
         self.inference_config: Dict = {}  # Inference configuration
         self.popularity_scores: Dict[str, float] = {}  # Route popularity scores
         self.route_metadata: Optional[pd.DataFrame] = None  # Route metadata (surface, distance, etc.)
+        self.user_seen: Optional[Dict[str, set]] = None  # User interaction data for collaborative filtering
+        self.user_route_matrix: Optional[np.ndarray] = None  # User-route interaction matrix
+        self.route_to_matrix_idx: Optional[Dict[str, int]] = None  # Route ID to matrix index
+        self.user_to_matrix_idx: Optional[Dict[str, int]] = None  # User ID to matrix index
 
     def _save(self, X: np.ndarray):
         os.makedirs(settings.recsys_index_dir, exist_ok=True)
@@ -145,6 +149,40 @@ class Recommender:
                 print(f"  ✅ Route metadata loaded: {len(self.route_metadata)} routes")
                 print(f"      Features: surface_type, distance, elevation, difficulty, etc.")
             
+            # Load user interaction data (for collaborative filtering)
+            user_seen_path = model_dir / "meta" / "user_seen.csv"
+            if user_seen_path.exists():
+                user_seen_df = pd.read_csv(user_seen_path)
+                self.user_seen = {}
+                for user_id in user_seen_df['user_id'].unique():
+                    user_routes = user_seen_df[user_seen_df['user_id'] == user_id]['route_id'].tolist()
+                    self.user_seen[user_id] = set(str(r) for r in user_routes)
+                
+                print(f"  ✅ User interaction data loaded: {len(self.user_seen)} users")
+                
+                # Build user-route interaction matrix for collaborative filtering
+                all_users = sorted(self.user_seen.keys())
+                all_routes = sorted(self.idmap)
+                
+                self.user_to_matrix_idx = {user: idx for idx, user in enumerate(all_users)}
+                self.route_to_matrix_idx = {route: idx for idx, route in enumerate(all_routes)}
+                
+                # Create binary interaction matrix
+                self.user_route_matrix = np.zeros((len(all_users), len(all_routes)), dtype=np.float32)
+                
+                for user_id, seen_routes in self.user_seen.items():
+                    if user_id in self.user_to_matrix_idx:
+                        user_idx = self.user_to_matrix_idx[user_id]
+                        for route_id in seen_routes:
+                            if route_id in self.route_to_matrix_idx:
+                                route_idx = self.route_to_matrix_idx[route_id]
+                                self.user_route_matrix[user_idx, route_idx] = 1.0
+                
+                print(f"      Interaction matrix: {self.user_route_matrix.shape} (users × routes)")
+                print(f"      Total interactions: {int(self.user_route_matrix.sum())}")
+            else:
+                print(f"  ⚠️  User interaction data not found (collaborative filtering disabled)")
+            
             # Load feature columns
             feature_cols_path = model_dir / "retrieval" / "feature_columns.json"
             if feature_cols_path.exists():
@@ -198,6 +236,57 @@ class Recommender:
                 # Last resort: rebuild from CSV
                 print("📊 Building index from CSV...")
                 self.rebuild_from_csv(settings.csv_seed_path)
+    
+    def get_collaborative_scores(self, query_route_id: str, user_id: Optional[str] = None, k: int = 100) -> Dict[str, float]:
+        """
+        Compute collaborative filtering scores based on user-item interactions.
+        Uses item-item collaborative filtering (routes that are done together).
+        
+        Args:
+            query_route_id: The route to find similar routes for
+            user_id: Optional user ID for personalized recommendations
+            k: Number of top routes to return
+            
+        Returns:
+            Dictionary mapping route_id -> collaborative score
+        """
+        if self.user_route_matrix is None or self.route_to_matrix_idx is None:
+            return {}
+        
+        # Get the query route index
+        if query_route_id not in self.route_to_matrix_idx:
+            return {}
+        
+        query_idx = self.route_to_matrix_idx[query_route_id]
+        
+        # Compute item-item similarity (which routes are done by similar users)
+        # Get users who did this route
+        query_vector = self.user_route_matrix[:, query_idx]
+        
+        if query_vector.sum() == 0:
+            # No users have done this route
+            return {}
+        
+        # Find similar routes using cosine similarity
+        # Routes are similar if they're done by the same users
+        from sklearn.metrics.pairwise import cosine_similarity
+        
+        # Transpose to get route-user matrix
+        route_user_matrix = self.user_route_matrix.T
+        
+        # Compute similarity between query route and all other routes
+        similarities = cosine_similarity(
+            query_vector.reshape(1, -1),
+            route_user_matrix
+        )[0]
+        
+        # Convert to scores dictionary
+        scores = {}
+        for route_id, route_idx in self.route_to_matrix_idx.items():
+            if route_id != query_route_id:
+                scores[route_id] = float(similarities[route_idx])
+        
+        return scores
 
     def search_by_activity(
         self, 
@@ -281,21 +370,83 @@ class Recommender:
                 return result
             
             elif strategy in ["ensemble", "ensemble_mmr"]:
-                # TODO: Implement collaborative filtering component
-                # For now, fall back to content-based
-                print(f"   → Using ensemble fallback (not yet implemented)")
-                if strategy == "ensemble":
-                    return list(zip(candidates[:k], candidate_scores[:k]))
+                # Ensemble: Combine content-based + collaborative filtering
+                print(f"   → Using ensemble strategy (content + collaborative)")
+                
+                # Get collaborative filtering scores
+                collab_scores_dict = self.get_collaborative_scores(activity_id)
+                
+                if not collab_scores_dict:
+                    # No collaborative data available, fall back to content-based
+                    print(f"   ⚠️  No collaborative data available, falling back to content-based")
+                    if strategy == "ensemble":
+                        return list(zip(candidates[:k], candidate_scores[:k]))
+                    else:
+                        candidate_vectors = self.feature_vectors[candidate_indices]
+                        candidate_scores_array = np.array(candidate_scores)
+                        return mmr_rerank(
+                            candidate_vectors,
+                            candidates,
+                            candidate_scores_array,
+                            top_m=k,
+                            lambda_diversity=lambda_diversity
+                        )
+                
+                # Combine content-based and collaborative scores
+                # Normalize both to 0-1 range
+                content_scores = np.array(candidate_scores)
+                content_min, content_max = content_scores.min(), content_scores.max()
+                content_range = content_max - content_min if content_max > content_min else 1.0
+                content_normalized = (content_scores - content_min) / content_range
+                
+                # Get collaborative scores for candidates
+                collab_scores = []
+                for cid in candidates:
+                    collab_scores.append(collab_scores_dict.get(cid, 0.0))
+                collab_scores = np.array(collab_scores)
+                
+                # Normalize collaborative scores
+                if collab_scores.max() > 0:
+                    collab_min, collab_max = collab_scores.min(), collab_scores.max()
+                    collab_range = collab_max - collab_min if collab_max > collab_min else 1.0
+                    collab_normalized = (collab_scores - collab_min) / collab_range
                 else:
-                    candidate_vectors = self.feature_vectors[candidate_indices]
-                    candidate_scores_array = np.array(candidate_scores)
-                    return mmr_rerank(
-                        candidate_vectors,
-                        candidates,
-                        candidate_scores_array,
+                    collab_normalized = collab_scores
+                
+                # Weighted combination (60% content, 40% collaborative)
+                # Research shows content-based should have slightly more weight
+                ensemble_scores = 0.6 * content_normalized + 0.4 * collab_normalized
+                
+                # Sort by ensemble scores
+                sorted_indices = np.argsort(-ensemble_scores)
+                ensemble_candidates = [candidates[i] for i in sorted_indices]
+                ensemble_scores_sorted = [ensemble_scores[i] for i in sorted_indices]
+                
+                print(f"   → Combined {len(ensemble_candidates)} candidates (content + collaborative)")
+                print(f"   → Score range: {ensemble_scores_sorted[0]:.4f} to {ensemble_scores_sorted[-1]:.4f}")
+                
+                if strategy == "ensemble":
+                    # Return top-k ensemble results
+                    result = list(zip(ensemble_candidates[:k], ensemble_scores_sorted[:k]))
+                    print(f"   → Returning {len(result)} ensemble results")
+                    return result
+                else:
+                    # Apply MMR reranking on ensemble results
+                    print(f"   → Applying MMR reranking on ensemble (lambda={lambda_diversity})")
+                    # Get feature vectors for reranking
+                    rerank_indices = [candidate_indices[i] for i in sorted_indices]
+                    rerank_vectors = self.feature_vectors[rerank_indices]
+                    rerank_scores = np.array(ensemble_scores_sorted)
+                    
+                    result = mmr_rerank(
+                        rerank_vectors,
+                        ensemble_candidates,
+                        rerank_scores,
                         top_m=k,
                         lambda_diversity=lambda_diversity
                     )
+                    print(f"   → MMR returned {len(result)} results")
+                    return result
             
             elif strategy == "popularity":
                 # Popularity-based recommendations (for cold-start)

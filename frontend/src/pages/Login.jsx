@@ -86,36 +86,35 @@ function Login() {
     setLoading(true);
     
     try {
-      // Create user in database first
-      const userId = `user_${Date.now()}`;
-      const userName = email.split('@')[0];
-      
-      const response = await fetch('/api/users', {
+      // Authenticate with backend
+      const response = await fetch('/api/users/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: userId,
-          name: userName
+          email: email,
+          password: password
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create user');
+        throw new Error(errorData.detail || 'Invalid email or password');
       }
 
       const userData = await response.json();
       
-      const newUser = {
+      const user = {
         id: userData.id,
         name: userData.name,
-        email: email,
-        profile_image_url: null,
+        email: userData.email,
+        bio: userData.bio,
+        location: userData.location,
+        profile_image_url: userData.profile_image_url,
         provider: 'email'
       };
       
-      login(newUser);
-      console.log('✅ User logged in with email:', userId);
+      login(user);
+      console.log('✅ User logged in:', userData.id, '(' + userData.name + ')');
       navigate('/');
     } catch (err) {
       console.error('Email login error:', err);

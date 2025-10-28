@@ -373,7 +373,7 @@ function Demo() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-2">
                       <TrendingUp className="h-5 w-5 text-slate-700" />
-                      <h2 className="text-lg font-semibold text-slate-900">FAISS Vector Recommendations</h2>
+                      <h2 className="text-lg font-semibold text-slate-900">Recommendations</h2>
                     </div>
                   </div>
                   
@@ -411,14 +411,14 @@ function Demo() {
                         <option value="content">Pure Similarity (Fast Baseline)</option>
                         <option value="content_mmr">Content + Diversity (Recommended)</option>
                         <option value="popularity">Popularity-Based</option>
-                        <option value="ensemble">Ensemble (Future)</option>
-                        <option value="ensemble_mmr">Ensemble + Diversity (Future)</option>
+                        <option value="ensemble">Ensemble (Content + Collaborative)</option>
+                        <option value="ensemble_mmr">Ensemble + Diversity</option>
                       </select>
                       <div className="mt-1.5 text-xs text-slate-500">
                         {strategy === 'content' && 'Fast cosine similarity matching'}
                         {strategy === 'content_mmr' && 'Best quality: Balances relevance with diversity using MMR'}
                         {strategy === 'popularity' && 'Shows most popular routes from historical data'}
-                        {strategy === 'ensemble' && 'Combines content + collaborative filtering'}
+                        {strategy === 'ensemble' && 'Combines content-based + collaborative filtering (60/40 blend)'}
                         {strategy === 'ensemble_mmr' && 'Best coverage: Ensemble with diversity reranking'}
                       </div>
                     </div>

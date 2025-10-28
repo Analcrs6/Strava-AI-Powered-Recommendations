@@ -93,37 +93,54 @@ function RecordActivity() {
         watchIdRef.current = navigator.geolocation.watchPosition(
           (position) => {
             const newPoint = [position.coords.latitude, position.coords.longitude];
+            const accuracy = position.coords.accuracy;
+            
             setCurrentLocation(newPoint);
-            setGpsAccuracy(position.coords.accuracy);
+            setGpsAccuracy(accuracy);
+            setGpsError(null); // Clear any previous error
             
-            // Add point to route
-            setRoute(prevRoute => {
-              const newRoute = [...prevRoute, newPoint];
-              
-              // Calculate distance if we have a previous point
-              if (prevRoute.length > 0) {
-                const lastPoint = prevRoute[prevRoute.length - 1];
-                const dist = calculateDistance(lastPoint, newPoint);
-                setDistance(prev => prev + dist);
-              }
-              
-              return newRoute;
-            });
+            // Only add point to route if accuracy is reasonable (< 100m)
+            // This prevents adding points when GPS signal is poor
+            if (accuracy < 100) {
+              setRoute(prevRoute => {
+                const newRoute = [...prevRoute, newPoint];
+                
+                // Calculate distance if we have a previous point
+                if (prevRoute.length > 0) {
+                  const lastPoint = prevRoute[prevRoute.length - 1];
+                  const dist = calculateDistance(lastPoint, newPoint);
+                  // Only add distance if movement is reasonable (< 100m between points)
+                  // This prevents spikes from GPS drift
+                  if (dist < 100) {
+                    setDistance(prev => prev + dist);
+                  }
+                }
+                
+                return newRoute;
+              });
+            }
             
-            // Simulate elevation change based on movement
-            if (position.coords.altitude) {
-              setElevation(prev => prev + Math.abs(Math.random() * 2 - 1));
+            // Update elevation if available
+            if (position.coords.altitude !== null && position.coords.altitude !== undefined) {
+              setElevation(Math.max(0, position.coords.altitude));
             }
           },
           (error) => {
             console.error('GPS tracking error:', error);
-            setGpsError('GPS signal lost. Please check your location settings.');
+            if (error.code === error.PERMISSION_DENIED) {
+              setGpsError('Location access denied. Please enable location permissions.');
+            } else if (error.code === error.POSITION_UNAVAILABLE) {
+              setGpsError('GPS signal unavailable. Move to an open area.');
+            } else if (error.code === error.TIMEOUT) {
+              setGpsError('GPS timeout. Trying again...');
+            } else {
+              setGpsError('GPS error. Please check your location settings.');
+            }
           },
           { 
             enableHighAccuracy: true, 
-            timeout: 5000, 
-            maximumAge: 0,
-            distanceFilter: 5 // Update every 5 meters
+            timeout: 10000, 
+            maximumAge: 0
           }
         );
       }
@@ -300,14 +317,14 @@ function RecordActivity() {
                 </div>
               )}
               
-              {gpsAccuracy && (
+              {gpsAccuracy !== null && (
                 <div className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                  gpsAccuracy < 20 ? 'bg-green-600 text-white' :
-                  gpsAccuracy < 50 ? 'bg-yellow-600 text-white' :
-                  gpsAccuracy < 500 ? 'bg-orange-600 text-white' :
+                  gpsAccuracy < 15 ? 'bg-green-600 text-white' :
+                  gpsAccuracy < 30 ? 'bg-yellow-600 text-white' :
+                  gpsAccuracy < 100 ? 'bg-orange-600 text-white' :
                   'bg-red-600 text-white'
                 }`}>
-                  GPS Accuracy: {gpsAccuracy < 500 ? `±${Math.round(gpsAccuracy)}m` : 'Poor (Searching...)'}
+                  GPS Accuracy: {gpsAccuracy < 100 ? `±${Math.round(gpsAccuracy)}m` : 'Poor (Searching...)'}
                 </div>
               )}
               
