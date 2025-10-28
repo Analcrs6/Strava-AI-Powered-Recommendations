@@ -37,20 +37,45 @@ function Signup() {
 
   const handleSocialSignup = async (provider) => {
     setLoading(true);
-    // In production, this would redirect to OAuth provider
-    // For now, simulate the signup
-    setTimeout(() => {
-      const mockUser = {
-        id: `user_${Date.now()}`,
-        name: `${provider.charAt(0).toUpperCase()}${provider.slice(1)} User`,
+    setError(null);
+    
+    try {
+      // Create user in database first
+      const userId = `user_${Date.now()}`;
+      const userName = `${provider.charAt(0).toUpperCase()}${provider.slice(1)} User`;
+      
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: userId,
+          name: userName
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create user');
+      }
+
+      const userData = await response.json();
+      
+      const newUser = {
+        id: userData.id,
+        name: userData.name,
         email: `user@${provider}.com`,
         profile_image_url: null,
         provider: provider
       };
-      login(mockUser);
-      setLoading(false);
+      
+      login(newUser);
+      console.log('✅ User created via', provider, ':', userId);
       navigate('/');
-    }, 1000);
+    } catch (err) {
+      console.error('Social signup error:', err);
+      setError(err.message || `Failed to sign up with ${provider}`);
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -75,20 +100,43 @@ function Signup() {
 
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      const mockUser = {
-        id: `user_${Date.now()}`,
-        name: formData.name,
+    try {
+      // Create user in database first
+      const userId = `user_${Date.now()}`;
+      
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: userId,
+          name: formData.name
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create user');
+      }
+
+      const userData = await response.json();
+      
+      const newUser = {
+        id: userData.id,
+        name: userData.name,
         email: formData.email,
         location: formData.location,
         profile_image_url: null,
         provider: 'email'
       };
-      login(mockUser);
-      setLoading(false);
+      
+      login(newUser);
+      console.log('✅ User created with email signup:', userId);
       navigate('/');
-    }, 1000);
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError(err.message || 'Failed to create account');
+      setLoading(false);
+    }
   };
 
   return (

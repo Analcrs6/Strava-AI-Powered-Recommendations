@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, User, Camera, Save, Trash2, AlertTriangle } from 'lucide-react';
+import { usersAPI } from '../services/api';
+import { ArrowLeft, User, Camera, Save, Trash2, AlertTriangle, Upload } from 'lucide-react';
 
 function Settings() {
   const navigate = useNavigate();
@@ -10,6 +11,9 @@ function Settings() {
   const [message, setMessage] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [profileImage, setProfileImage] = useState(user?.profile_image_url || null);
+  const [imageFile, setImageFile] = useState(null);
+  const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -25,17 +29,40 @@ function Settings() {
     });
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        setMessage({
+          type: 'error',
+          text: 'Image size must be less than 5MB'
+        });
+        return;
+      }
+      
+      setImageFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
 
     try {
-      // Simulate API call (replace with actual API call)
+      // TODO: Implement real API call with image upload
+      // For now, simulate the update
       setTimeout(() => {
         const updatedUser = {
           ...user,
-          ...formData
+          ...formData,
+          profile_image_url: profileImage || user?.profile_image_url
         };
         updateUser(updatedUser);
         setLoading(false);
@@ -57,13 +84,14 @@ function Settings() {
     setDeleteLoading(true);
     
     try {
-      // Simulate API call to delete account
-      setTimeout(() => {
-        logout();
-        navigate('/');
-        setDeleteLoading(false);
-      }, 1500);
+      // Call API to delete user
+      await usersAPI.delete(user.id);
+      
+      console.log(`🗑️  Account deleted for user: ${user.id}`);
+      logout();
+      navigate('/');
     } catch (error) {
+      console.error('Error deleting account:', error);
       setDeleteLoading(false);
       alert('Failed to delete account. Please try again.');
     }
@@ -97,19 +125,51 @@ function Settings() {
                 Profile Picture
               </label>
               <div className="flex items-center space-x-4">
-                <div className="h-20 w-20 rounded-full bg-slate-800 flex items-center justify-center">
-                  <span className="text-white text-2xl font-semibold">
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                {profileImage ? (
+                  <img
+                    src={profileImage}
+                    alt="Profile"
+                    className="h-20 w-20 rounded-full object-cover border-2 border-slate-200"
+                  />
+                ) : (
+                  <div className="h-20 w-20 rounded-full bg-slate-800 flex items-center justify-center">
+                    <span className="text-white text-2xl font-semibold">
+                      {user?.name?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
                 <button
                   type="button"
+                  onClick={() => fileInputRef.current?.click()}
                   className="flex items-center space-x-2 px-4 py-2 border border-slate-300 rounded-md hover:bg-slate-50 transition text-sm"
                 >
-                  <Camera className="h-4 w-4" />
-                  <span>Change Photo</span>
+                  <Upload className="h-4 w-4" />
+                  <span>Upload Photo</span>
                 </button>
+                {profileImage && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileImage(null);
+                      setImageFile(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }}
+                    className="text-xs text-red-600 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
+              <p className="text-xs text-slate-500 mt-2">PNG, JPG or JPEG. Max 5MB.</p>
             </div>
 
             {/* Name */}

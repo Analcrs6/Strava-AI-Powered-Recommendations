@@ -31,16 +31,22 @@ export const AuthProvider = ({ children }) => {
   const login = (userData) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+    console.log('✅ User logged in:', userData.id);
   };
 
   const logout = () => {
+    if (user) {
+      console.log('👋 User logged out:', user.id);
+    }
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('location_sharing_enabled');
   };
 
   const updateUser = (userData) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+    console.log('✏️  User profile updated:', userData.id);
   };
 
   return (

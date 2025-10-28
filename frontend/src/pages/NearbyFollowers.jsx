@@ -33,8 +33,10 @@ function NearbyFollowers() {
       return;
     }
 
-    // Check if user has location sharing enabled
-    if (user.location_sharing_enabled) {
+    // Check if user has location sharing enabled from localStorage
+    const savedSharingState = localStorage.getItem('location_sharing_enabled');
+    if (savedSharingState === 'true' || user.location_sharing_enabled) {
+      setLocationEnabled(true);
       startLocationTracking();
     }
 
@@ -184,7 +186,11 @@ function NearbyFollowers() {
         setLocationEnabled(false);
       }
 
+      // Save to localStorage for persistence
+      localStorage.setItem('location_sharing_enabled', newEnabled.toString());
+      
       await locationAPI.toggleLocationSharing(user.id, newEnabled);
+      console.log(`📍 Location sharing ${newEnabled ? 'enabled' : 'disabled'} for ${user.id}`);
     } catch (error) {
       console.error('Error toggling location sharing:', error);
       setError('Failed to toggle location sharing');

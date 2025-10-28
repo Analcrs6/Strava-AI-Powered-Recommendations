@@ -14,57 +14,19 @@ function Notifications() {
   }, []);
 
   const loadNotifications = async () => {
-    try {
-      // Simulate API call
-      setTimeout(() => {
-        const mockNotifications = [
-          {
-            id: '1',
-            type: 'follow',
-            user: { id: 'user1', name: 'Sarah Johnson', avatar_color: 'bg-blue-600' },
-            message: 'started following you',
-            timestamp: '2 hours ago',
-            unread: true
-          },
-          {
-            id: '2',
-            type: 'like',
-            user: { id: 'user2', name: 'Mike Chen', avatar_color: 'bg-purple-600' },
-            message: 'liked your cycling activity',
-            timestamp: '5 hours ago',
-            unread: true
-          },
-          {
-            id: '3',
-            type: 'comment',
-            user: { id: 'user3', name: 'Emma Davis', avatar_color: 'bg-green-600' },
-            message: 'commented on your run',
-            timestamp: '1 day ago',
-            unread: false
-          },
-          {
-            id: '4',
-            type: 'follow',
-            user: { id: 'user4', name: 'Alex Kim', avatar_color: 'bg-orange-600' },
-            message: 'started following you',
-            timestamp: '2 days ago',
-            unread: false
-          },
-          {
-            id: '5',
-            type: 'recommendation',
-            user: { id: 'system', name: 'Strava AI', avatar_color: 'bg-slate-800' },
-            message: 'recommended 3 new routes for you',
-            timestamp: '3 days ago',
-            unread: false
-          }
-        ];
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-        setNotifications(mockNotifications);
-        setLoading(false);
-      }, 1000);
+    try {
+      // TODO: Implement real notifications API
+      // For now, return empty until backend is implemented
+      setNotifications([]);
+      setLoading(false);
     } catch (error) {
       console.error('Error loading notifications:', error);
+      setNotifications([]);
       setLoading(false);
     }
   };

@@ -24,82 +24,27 @@ function Messages() {
   }, [selectedConversation]);
 
   const loadConversations = async () => {
-    try {
-      // Simulate API call
-      setTimeout(() => {
-        const mockConversations = [
-          {
-            id: '1',
-            user: { id: 'user1', name: 'Sarah Johnson', avatar_color: 'bg-blue-600' },
-            lastMessage: 'Great run today! 🏃',
-            timestamp: '2m ago',
-            unread: true
-          },
-          {
-            id: '2',
-            user: { id: 'user2', name: 'Mike Chen', avatar_color: 'bg-purple-600' },
-            lastMessage: 'Want to join me for a ride tomorrow?',
-            timestamp: '1h ago',
-            unread: false
-          },
-          {
-            id: '3',
-            user: { id: 'user3', name: 'Emma Davis', avatar_color: 'bg-green-600' },
-            lastMessage: 'Thanks for the route recommendation!',
-            timestamp: '2d ago',
-            unread: false
-          }
-        ];
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-        setConversations(mockConversations);
-        setLoading(false);
-      }, 1000);
+    try {
+      // TODO: Implement real messaging API
+      // For now, return empty until backend is implemented
+      setConversations([]);
+      setLoading(false);
     } catch (error) {
       console.error('Error loading conversations:', error);
+      setConversations([]);
       setLoading(false);
     }
   };
 
   const loadMessages = async (conversationId) => {
-    // Simulate API call
-    const mockMessages = [
-      {
-        id: '1',
-        sender_id: 'user1',
-        content: 'Hey! Did you see my latest cycling activity?',
-        timestamp: '10:30 AM',
-        isOwn: false
-      },
-      {
-        id: '2',
-        sender_id: user?.id,
-        content: 'Yes! That was impressive! How did you manage that elevation?',
-        timestamp: '10:35 AM',
-        isOwn: true
-      },
-      {
-        id: '3',
-        sender_id: 'user1',
-        content: 'Lots of training! You should try that route too.',
-        timestamp: '10:40 AM',
-        isOwn: false
-      },
-      {
-        id: '4',
-        sender_id: user?.id,
-        content: 'I will! Can you share the route details?',
-        timestamp: '10:42 AM',
-        isOwn: true
-      },
-      {
-        id: '5',
-        sender_id: 'user1',
-        content: 'Great run today! 🏃',
-        timestamp: '2m ago',
-        isOwn: false
-      }
-    ];
-    setMessages(mockMessages);
+    // TODO: Implement real messaging API
+    // For now, return empty until backend is implemented
+    setMessages([]);
   };
 
   const sendMessage = (e) => {

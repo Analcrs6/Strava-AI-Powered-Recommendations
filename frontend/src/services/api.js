@@ -42,6 +42,7 @@ export const usersAPI = {
   list: (skip = 0, limit = 100) => api.get(`/users?skip=${skip}&limit=${limit}`),
   get: (id) => api.get(`/users/${id}`),
   create: (data) => api.post('/users', data),
+  delete: (id) => api.delete(`/users/${id}`),
 };
 
 export const demoAPI = {

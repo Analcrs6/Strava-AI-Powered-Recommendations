@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { socialAPI, activitiesAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { socialAPI, activitiesAPI, usersAPI } from '../services/api';
 import { Users, MapPin, Calendar, Activity, UserPlus, UserMinus, Edit2, TrendingUp } from 'lucide-react';
 import { formatDistance, formatDuration } from '../utils/format';
 
 function UserProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [activities, setActivities] = useState([]);
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
   const [activeTab, setActiveTab] = useState('activities');
   const [loading, setLoading] = useState(true);
-  const [currentUser] = useState('current_user'); // TODO: Get from auth context
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadProfile();
@@ -24,11 +26,35 @@ function UserProfile() {
 
   const loadProfile = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await socialAPI.getProfile(userId, currentUser);
-      setProfile(response.data);
+      // Try to get profile from social API first
+      try {
+        const response = await socialAPI.getProfile(userId, currentUser?.id);
+        setProfile(response.data);
+      } catch (socialError) {
+        // Fallback to basic user API
+        console.log('Social API failed, trying users API...');
+        const response = await usersAPI.get(userId);
+        const userData = response.data;
+        // Create a basic profile structure
+        setProfile({
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          bio: userData.bio,
+          location: userData.location,
+          profile_image_url: userData.profile_image_url,
+          activity_count: 0,
+          follower_count: 0,
+          following_count: 0,
+          is_following: false,
+          follows_you: false
+        });
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
+      setError('User not found or profile could not be loaded');
     } finally {
       setLoading(false);
     }
@@ -64,11 +90,16 @@ function UserProfile() {
   };
 
   const handleFollow = async () => {
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+    
     try {
       if (profile.is_following) {
-        await socialAPI.unfollow(currentUser, userId);
+        await socialAPI.unfollow(currentUser.id, userId);
       } else {
-        await socialAPI.follow(currentUser, userId);
+        await socialAPI.follow(currentUser.id, userId);
       }
       await loadProfile();
       await loadFollowers();
@@ -86,13 +117,14 @@ function UserProfile() {
     );
   }
 
-  if (!profile) {
+  if (error || !profile) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">User Not Found</h2>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">User Not Found</h2>
+        <p className="text-slate-600 mb-4">{error || 'This profile does not exist or could not be loaded.'}</p>
         <button
           onClick={() => navigate('/')}
-          className="text-blue-600 hover:text-blue-700"
+          className="text-orange-600 hover:text-orange-700 font-medium"
         >
           Return to Dashboard
         </button>
@@ -100,7 +132,7 @@ function UserProfile() {
     );
   }
 
-  const isOwnProfile = currentUser === userId;
+  const isOwnProfile = currentUser?.id === userId;
 
   return (
     <div className="min-h-screen bg-gray-50">

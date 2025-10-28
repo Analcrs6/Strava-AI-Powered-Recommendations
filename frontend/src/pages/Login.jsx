@@ -41,37 +41,87 @@ function Login() {
 
   const handleSocialLogin = async (provider) => {
     setLoading(true);
-    // Simulate social login (in real app, this would redirect to OAuth)
-    setTimeout(() => {
-      const mockUser = {
-        id: `user_${Date.now()}`,
-        name: `${provider.charAt(0).toUpperCase()}${provider.slice(1)} User`,
+    
+    try {
+      // Create user in database first
+      const userId = `user_${Date.now()}`;
+      const userName = `${provider.charAt(0).toUpperCase()}${provider.slice(1)} User`;
+      
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: userId,
+          name: userName
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create user');
+      }
+
+      const userData = await response.json();
+      
+      const newUser = {
+        id: userData.id,
+        name: userData.name,
         email: `user@${provider}.com`,
         profile_image_url: null,
         provider: provider
       };
-      login(mockUser);
-      setLoading(false);
+      
+      login(newUser);
+      console.log('✅ User logged in via', provider, ':', userId);
       navigate('/');
-    }, 1000);
+    } catch (err) {
+      console.error('Social login error:', err);
+      alert(err.message || `Failed to log in with ${provider}`);
+      setLoading(false);
+    }
   };
 
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate email login
-    setTimeout(() => {
-      const mockUser = {
-        id: `user_${Date.now()}`,
-        name: email.split('@')[0],
+    
+    try {
+      // Create user in database first
+      const userId = `user_${Date.now()}`;
+      const userName = email.split('@')[0];
+      
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: userId,
+          name: userName
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create user');
+      }
+
+      const userData = await response.json();
+      
+      const newUser = {
+        id: userData.id,
+        name: userData.name,
         email: email,
         profile_image_url: null,
         provider: 'email'
       };
-      login(mockUser);
-      setLoading(false);
+      
+      login(newUser);
+      console.log('✅ User logged in with email:', userId);
       navigate('/');
-    }, 1000);
+    } catch (err) {
+      console.error('Email login error:', err);
+      alert(err.message || 'Failed to log in');
+      setLoading(false);
+    }
   };
 
   return (

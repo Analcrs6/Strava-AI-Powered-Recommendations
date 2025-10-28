@@ -76,7 +76,13 @@ def update_location(location: LocationUpdate, db: Session = Depends(get_db)):
     try:
         user = db.query(models.User).filter(models.User.id == location.user_id).first()
         if not user:
-            raise HTTPException(404, "User not found")
+            # Gracefully handle non-existent user
+            print(f"⚠️  User {location.user_id} not found for location update")
+            return {
+                "success": False,
+                "message": "User not found",
+                "user_id": location.user_id
+            }
         
         user.latitude = location.latitude
         user.longitude = location.longitude
@@ -96,7 +102,12 @@ def update_location(location: LocationUpdate, db: Session = Depends(get_db)):
         }
     except Exception as e:
         db.rollback()
-        raise HTTPException(500, f"Failed to update location: {str(e)}")
+        print(f"⚠️  Error updating location: {e}")
+        return {
+            "success": False,
+            "message": str(e),
+            "user_id": location.user_id
+        }
 
 @router.get("/mutual-followers/{user_id}")
 def get_mutual_followers_locations(
@@ -115,7 +126,9 @@ def get_mutual_followers_locations(
         # Get current user
         current_user = db.query(models.User).filter(models.User.id == user_id).first()
         if not current_user:
-            raise HTTPException(404, "User not found")
+            # Gracefully return empty list if user doesn't exist
+            print(f"⚠️  User {user_id} not found for location lookup")
+            return []
         
         if not current_user.latitude or not current_user.longitude:
             return []
@@ -179,8 +192,9 @@ def get_mutual_followers_locations(
         
         return nearby_users
     except Exception as e:
-        print(f"Error getting mutual followers locations: {e}")
-        raise HTTPException(500, f"Failed to get locations: {str(e)}")
+        print(f"⚠️  Error getting mutual followers locations: {e}")
+        # Return empty list instead of raising error
+        return []
 
 @router.get("/proximity-check/{user_id}")
 def check_proximity_notifications(
@@ -215,8 +229,9 @@ def check_proximity_notifications(
         
         return notifications
     except Exception as e:
-        print(f"Error checking proximity: {e}")
-        raise HTTPException(500, f"Failed to check proximity: {str(e)}")
+        print(f"⚠️  Error checking proximity: {e}")
+        # Return empty list instead of raising error
+        return []
 
 @router.post("/toggle-sharing/{user_id}")
 def toggle_location_sharing(
@@ -228,7 +243,13 @@ def toggle_location_sharing(
     try:
         user = db.query(models.User).filter(models.User.id == user_id).first()
         if not user:
-            raise HTTPException(404, "User not found")
+            # Gracefully handle non-existent user
+            print(f"⚠️  User {user_id} not found for location sharing toggle")
+            return {
+                "success": False,
+                "message": "User not found",
+                "enabled": False
+            }
         
         user.location_sharing_enabled = enabled
         db.commit()
@@ -243,5 +264,10 @@ def toggle_location_sharing(
         }
     except Exception as e:
         db.rollback()
-        raise HTTPException(500, f"Failed to toggle location sharing: {str(e)}")
+        print(f"⚠️  Error toggling location sharing: {e}")
+        return {
+            "success": False,
+            "message": str(e),
+            "enabled": False
+        }
 
