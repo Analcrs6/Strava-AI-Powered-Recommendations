@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { demoAPI, activitiesAPI, recommendAPI } from '../services/api';
-import { Sparkles, Trash2, Users, AlertCircle, CheckCircle, Play, ArrowLeft, TrendingUp, Settings, Sliders, Filter, Zap, BarChart3, Activity as ActivityIcon } from 'lucide-react';
+import { Sparkles, Trash2, Users, AlertCircle, CheckCircle, Play, ArrowLeft, TrendingUp, Settings, Sliders, Filter, Activity as ActivityIcon } from 'lucide-react';
 import { formatDistance, formatDuration } from '../utils/format';
 
 function Demo() {
@@ -19,7 +19,6 @@ function Demo() {
   const [strategy, setStrategy] = useState('content_mmr');
   const [lambdaDiversity, setLambdaDiversity] = useState(0.3);
   const [excludeSeen, setExcludeSeen] = useState(false);
-  const [showRecommender, setShowRecommender] = useState(false);
   const [previousRecs, setPreviousRecs] = useState([]);
 
   useEffect(() => {
@@ -106,7 +105,6 @@ function Demo() {
       setActivities([]);
       setSelectedActivity(null);
       setRecommendations([]);
-      setShowRecommender(false);
       setPreviousRecs([]);
     } catch (error) {
       setMessage({
@@ -120,7 +118,6 @@ function Demo() {
 
   const handleSelectActivity = async (activity) => {
     setSelectedActivity(activity);
-    setShowRecommender(true);
     loadRecommendations(activity);
   };
 
@@ -154,114 +151,72 @@ function Demo() {
 
   // Reload recommendations when strategy or settings change
   useEffect(() => {
-    if (selectedActivity && showRecommender) {
+    if (selectedActivity) {
       loadRecommendations();
     }
   }, [strategy, lambdaDiversity, excludeSeen]);
 
-  const getStrategyInfo = (strat) => {
-    const info = {
-      content: {
-        name: 'Pure Similarity',
-        icon: <TrendingUp className="h-4 w-4" />,
-        desc: 'Fast baseline using cosine similarity',
-        color: 'blue'
-      },
-      content_mmr: {
-        name: 'Content + Diversity',
-        icon: <Sparkles className="h-4 w-4" />,
-        desc: 'Best ranking quality (MAP & NDCG)',
-        color: 'purple',
-        badge: '⭐ RECOMMENDED'
-      },
-      popularity: {
-        name: 'Popularity-Based',
-        icon: <BarChart3 className="h-4 w-4" />,
-        desc: 'Most popular routes first',
-        color: 'orange'
-      },
-      ensemble: {
-        name: 'Ensemble',
-        icon: <Zap className="h-4 w-4" />,
-        desc: 'Content + Collaborative (future)',
-        color: 'green'
-      },
-      ensemble_mmr: {
-        name: 'Ensemble + Diversity',
-        icon: <Sparkles className="h-4 w-4" />,
-        desc: 'Best coverage/recall (future)',
-        color: 'indigo',
-        badge: 'BEST RECALL'
-      }
-    };
-    return info[strat] || info.content;
-  };
-
   const newRoutes = recommendations.filter(r => !previousRecs.includes(r.activity_id));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <button
             onClick={() => navigate('/')}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 mb-4 transition"
+            className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 mb-4 transition"
           >
             <ArrowLeft className="h-5 w-5" />
             <span>Back to Dashboard</span>
           </button>
           
-          <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="bg-slate-800 rounded-lg p-2">
+              <Sparkles className="h-7 w-7 text-white" />
+            </div>
             <div>
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-2">
-                  <Sparkles className="h-8 w-8 text-white" />
-                </div>
-                <h1 className="text-4xl font-bold text-gray-900">Demo Lab</h1>
-              </div>
-              <p className="text-lg text-gray-600">
-                Test the AI recommender system with real synthetic data
-              </p>
+              <h1 className="text-3xl font-bold text-slate-900">Demo Lab</h1>
+              <p className="text-sm text-slate-600">Test recommendation algorithms with synthetic data</p>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Sidebar - Controls */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-4">
             {/* User Selection */}
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <div className="bg-white rounded-lg shadow-sm p-5 border border-slate-200">
               <div className="flex items-center space-x-2 mb-4">
-                <Users className="h-5 w-5 text-blue-600" />
-                <h2 className="text-lg font-bold text-gray-900">Load Demo User</h2>
+                <Users className="h-5 w-5 text-slate-700" />
+                <h2 className="text-base font-semibold text-slate-900">Load Demo User</h2>
               </div>
 
               {stats && stats.total_activities > 0 && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-xs font-semibold text-blue-900 mb-2">Current Session</div>
+                <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded">
+                  <div className="text-xs font-semibold text-slate-700 mb-2">Current Session</div>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Users:</span>
-                      <span className="font-semibold text-gray-900">{stats.total_users}</span>
+                      <span className="text-slate-600">Users:</span>
+                      <span className="font-semibold text-slate-900">{stats.total_users}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Activities:</span>
-                      <span className="font-semibold text-gray-900">{stats.total_activities}</span>
+                      <span className="text-slate-600">Activities:</span>
+                      <span className="font-semibold text-slate-900">{stats.total_activities}</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Select User ({users.length} available)
                   </label>
                   <select
                     value={selectedUser}
                     onChange={(e) => setSelectedUser(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500 text-sm bg-white"
                     disabled={loading}
                   >
                     {users.length === 0 ? (
@@ -278,9 +233,9 @@ function Demo() {
 
                 {message && (
                   <div
-                    className={`p-3 rounded-lg flex items-start space-x-2 text-sm ${
+                    className={`p-3 rounded-md flex items-start space-x-2 text-sm ${
                       message.type === 'success'
-                        ? 'bg-green-50 border border-green-200 text-green-800'
+                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
                         : 'bg-red-50 border border-red-200 text-red-800'
                     }`}
                   >
@@ -296,9 +251,9 @@ function Demo() {
                 <button
                   onClick={handleLoadDemo}
                   disabled={loading || !selectedUser}
-                  className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                  className="w-full flex items-center justify-center space-x-2 bg-slate-800 text-white px-4 py-2.5 rounded-md hover:bg-slate-900 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
                 >
-                  <Play className="h-5 w-5" />
+                  <Play className="h-4 w-4" />
                   <span>{loading ? 'Loading...' : 'Load Demo Data'}</span>
                 </button>
 
@@ -306,7 +261,7 @@ function Demo() {
                   <button
                     onClick={handleClear}
                     disabled={clearing}
-                    className="w-full flex items-center justify-center space-x-2 bg-red-50 text-red-700 px-4 py-2 rounded-lg hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed border border-red-200"
+                    className="w-full flex items-center justify-center space-x-2 bg-red-50 text-red-700 px-4 py-2 rounded-md hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed border border-red-200 text-sm"
                   >
                     <Trash2 className="h-4 w-4" />
                     <span>{clearing ? 'Clearing...' : 'Clear Session'}</span>
@@ -316,13 +271,13 @@ function Demo() {
             </div>
 
             {/* Info Box */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4">
-              <p className="text-sm text-blue-900 font-semibold mb-2">💡 How it works:</p>
-              <ul className="text-xs text-blue-800 space-y-1.5">
-                <li>• Load a user's activities to test with</li>
-                <li>• Click any activity to see AI recommendations</li>
-                <li>• Try different strategies & diversity levels</li>
-                <li>• Toggle "Hide done routes" for discovery</li>
+            <div className="bg-slate-100 border border-slate-300 rounded-lg p-4">
+              <p className="text-sm text-slate-900 font-semibold mb-2">How it works:</p>
+              <ul className="text-xs text-slate-700 space-y-1.5 leading-relaxed">
+                <li>• Load synthetic user activities</li>
+                <li>• Select for similar route recommendations</li>
+                <li>• Or predict next activities from history</li>
+                <li>• Test strategies & diversity levels</li>
               </ul>
             </div>
           </div>
@@ -331,66 +286,76 @@ function Demo() {
           <div className="lg:col-span-3 space-y-6">
             {/* Activities Grid */}
             {activities.length > 0 && (
-              <div className="bg-white rounded-xl shadow-lg border border-gray-100">
-                <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
+              <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+                <div className="p-5 border-b border-slate-200 bg-slate-50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <ActivityIcon className="h-6 w-6 text-blue-600" />
-                      <h2 className="text-xl font-bold text-gray-900">
+                      <ActivityIcon className="h-5 w-5 text-slate-700" />
+                      <h2 className="text-lg font-semibold text-slate-900">
                         Loaded Activities
                       </h2>
                     </div>
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-bold">
-                      {activities.length} routes
+                    <span className="px-2.5 py-1 bg-slate-200 text-slate-700 rounded-md text-sm font-semibold">
+                      {activities.length}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">
-                    Click any activity to get AI-powered recommendations
+                  <p className="text-sm text-slate-600 mt-1">
+                    Click any activity to generate recommendations
                   </p>
                 </div>
                 
                 <div className="p-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-2">
                     {activities.map((activity, index) => {
                       const routeId = activity.id.split('_')[1] || `#${index + 1}`;
                       const isSelected = selectedActivity?.id === activity.id;
+                      const avgSpeed = activity.duration_s > 0 ? (activity.distance_m / 1000) / (activity.duration_s / 3600) : 0;
+                      const gradePercent = activity.distance_m > 0 ? (activity.elevation_gain_m / (activity.distance_m / 100)) : 0;
                       
                       return (
                         <button
                           key={activity.id}
                           onClick={() => handleSelectActivity(activity)}
-                          className={`text-left p-4 rounded-lg border-2 transition-all ${
+                          className={`text-left p-4 rounded-lg border transition-all ${
                             isSelected
-                              ? 'border-blue-500 bg-blue-50 shadow-md scale-[1.02]'
-                              : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
+                              ? 'border-slate-900 bg-slate-50 shadow-sm'
+                              : 'border-slate-200 hover:border-slate-400 hover:shadow-sm'
                           }`}
                         >
-                          <div className="flex items-start justify-between mb-2">
-                            <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
-                              activity.sport === 'running' ? 'bg-orange-100 text-orange-700' :
-                              activity.sport === 'cycling' ? 'bg-blue-100 text-blue-700' :
-                              'bg-green-100 text-green-700'
+                          <div className="flex items-start justify-between mb-3">
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
+                              activity.sport === 'running' ? 'bg-orange-100 text-orange-800' :
+                              activity.sport === 'cycling' ? 'bg-blue-100 text-blue-800' :
+                              'bg-green-100 text-green-800'
                             }`}>
                               {activity.sport}
                             </span>
                             {isSelected && (
-                              <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded font-bold">
-                                ✓ SELECTED
+                              <span className="text-xs bg-slate-900 text-white px-2 py-0.5 rounded font-semibold">
+                                SELECTED
                               </span>
                             )}
                           </div>
                           
-                          <div className="font-mono font-bold text-gray-900 mb-2">
-                            Route {routeId}
+                          <div className="font-mono font-bold text-slate-900 mb-3 text-lg">
+                            {routeId}
                           </div>
                           
-                          <div className="space-y-1 text-sm text-gray-600">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold">📏 {formatDistance(activity.distance_m)}</span>
-                              <span>⏱️ {formatDuration(activity.duration_s)}</span>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center justify-between text-slate-700">
+                              <span className="font-semibold">{formatDistance(activity.distance_m)}</span>
+                              <span className="text-slate-500">{formatDuration(activity.duration_s)}</span>
                             </div>
                             {activity.elevation_gain_m > 0 && (
-                              <div>⛰️ {Math.round(activity.elevation_gain_m)}m elevation</div>
+                              <div className="flex items-center justify-between text-xs text-slate-600">
+                                <span>Elevation: {Math.round(activity.elevation_gain_m)}m</span>
+                                <span>Grade: {gradePercent.toFixed(1)}%</span>
+                              </div>
+                            )}
+                            {avgSpeed > 0 && (
+                              <div className="text-xs text-slate-500">
+                                Avg Speed: {avgSpeed.toFixed(1)} km/h
+                              </div>
                             )}
                           </div>
                         </button>
@@ -402,68 +367,67 @@ function Demo() {
             )}
 
             {/* Recommender Panel */}
-            {showRecommender && selectedActivity && (
-              <div className="bg-white rounded-xl shadow-lg border border-gray-100">
-                <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
+            {selectedActivity && (
+              <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+                <div className="p-5 border-b border-slate-200 bg-slate-50">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-2">
-                      <TrendingUp className="h-6 w-6 text-purple-600" />
-                      <h2 className="text-xl font-bold text-gray-900">AI Recommendations</h2>
+                      <TrendingUp className="h-5 w-5 text-slate-700" />
+                      <h2 className="text-lg font-semibold text-slate-900">FAISS Vector Recommendations</h2>
                     </div>
-                    <button
-                      onClick={() => setShowRecommender(false)}
-                      className="text-gray-400 hover:text-gray-600 text-xl font-bold"
-                    >
-                      ✕
-                    </button>
                   </div>
                   
-                  <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg p-3">
-                    <div className="text-xs opacity-90 mb-1">Finding similar routes to:</div>
-                    <div className="font-bold capitalize text-lg">{selectedActivity.sport} Activity</div>
-                    <div className="text-sm opacity-90 mt-1">
+                  <div className="bg-slate-900 text-white rounded-lg p-4">
+                    <div className="text-xs text-slate-400 mb-1">Finding similar routes to:</div>
+                    <div className="font-semibold capitalize">{selectedActivity.sport} Activity</div>
+                    <div className="text-sm text-slate-300 mt-1">
                       {formatDistance(selectedActivity.distance_m)} • {formatDuration(selectedActivity.duration_s)}
+                      {selectedActivity.elevation_gain_m > 0 && ` • ${Math.round(selectedActivity.elevation_gain_m)}m elevation`}
                     </div>
                   </div>
                   
                   {newRoutes.length > 0 && (
-                    <div className="mt-3 bg-green-50 border border-green-300 rounded-lg px-3 py-2">
-                      <span className="text-sm text-green-800 font-semibold">
-                        ✨ {newRoutes.length} new {newRoutes.length === 1 ? 'route' : 'routes'} discovered!
+                    <div className="mt-3 bg-emerald-50 border border-emerald-300 rounded-lg px-3 py-2">
+                      <span className="text-sm text-emerald-800 font-semibold">
+                        {newRoutes.length} new {newRoutes.length === 1 ? 'route' : 'routes'} discovered
                       </span>
                     </div>
                   )}
                 </div>
 
                 {/* Strategy Controls */}
-                <div className="p-5 bg-gray-50 border-b border-gray-200">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-5 bg-white border-b border-slate-200">
+                  <div className="space-y-4">
                     <div>
-                      <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-slate-700 mb-2">
                         <Settings className="h-4 w-4" />
-                        <span>Recommendation Strategy</span>
+                        <span>Algorithm Strategy</span>
                       </label>
                       <select
                         value={strategy}
                         onChange={(e) => setStrategy(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white text-sm"
                       >
-                        <option value="content">🎯 Pure Similarity (Fast)</option>
-                        <option value="content_mmr">⭐ Content + Diversity (Best Quality)</option>
-                        <option value="popularity">📊 Popularity-Based</option>
-                        <option value="ensemble">⚡ Ensemble (Coming Soon)</option>
-                        <option value="ensemble_mmr">🔥 Ensemble + Diversity (Coming Soon)</option>
+                        <option value="content">Pure Similarity (Fast Baseline)</option>
+                        <option value="content_mmr">Content + Diversity (Recommended)</option>
+                        <option value="popularity">Popularity-Based</option>
+                        <option value="ensemble">Ensemble (Future)</option>
+                        <option value="ensemble_mmr">Ensemble + Diversity (Future)</option>
                       </select>
-                      <div className="mt-1 text-xs text-gray-500">
-                        {getStrategyInfo(strategy).desc}
+                      <div className="mt-1.5 text-xs text-slate-500">
+                        {strategy === 'content' && 'Fast cosine similarity matching'}
+                        {strategy === 'content_mmr' && 'Best quality: Balances relevance with diversity using MMR'}
+                        {strategy === 'popularity' && 'Shows most popular routes from historical data'}
+                        {strategy === 'ensemble' && 'Combines content + collaborative filtering'}
+                        {strategy === 'ensemble_mmr' && 'Best coverage: Ensemble with diversity reranking'}
                       </div>
                     </div>
 
                     {strategy.includes('mmr') && (
                       <div>
-                        <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
+                        <label className="flex items-center space-x-2 text-sm font-semibold text-slate-700 mb-2">
                           <Sliders className="h-4 w-4" />
-                          <span>Diversity: {lambdaDiversity.toFixed(1)}</span>
+                          <span>Diversity Level: {lambdaDiversity.toFixed(1)}</span>
                         </label>
                         <input
                           type="range"
@@ -472,113 +436,128 @@ function Demo() {
                           step="0.1"
                           value={lambdaDiversity}
                           onChange={(e) => setLambdaDiversity(parseFloat(e.target.value))}
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                          className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-700"
                         />
-                        <div className="flex justify-between text-xs text-gray-500 mt-1">
-                          <span>Relevance</span>
-                          <span>Balanced</span>
-                          <span>Variety</span>
+                        <div className="flex justify-between text-xs text-slate-600 mt-1.5">
+                          <span className="font-medium">Comfort</span>
+                          <span className="font-medium">Balanced</span>
+                          <span className="font-medium">Explore</span>
                         </div>
+                        <p className="text-xs text-slate-500 mt-1.5">
+                          {lambdaDiversity <= 0.3 && 'Similar to your usual routes'}
+                          {lambdaDiversity > 0.3 && lambdaDiversity < 0.7 && 'Mix of familiar and new routes'}
+                          {lambdaDiversity >= 0.7 && 'Discover different route types'}
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedActivity?.user_id && (
+                      <div className="pt-2">
+                        <label className="flex items-center space-x-2 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={excludeSeen}
+                            onChange={(e) => setExcludeSeen(e.target.checked)}
+                            className="rounded text-slate-700 focus:ring-2 focus:ring-slate-500"
+                          />
+                          <Filter className="h-4 w-4 text-slate-500 group-hover:text-slate-700 transition" />
+                          <span className="text-sm text-slate-700 font-medium">
+                            Hide routes I've already completed
+                          </span>
+                        </label>
                       </div>
                     )}
                   </div>
-
-                  {selectedActivity?.user_id && (
-                    <div className="mt-4">
-                      <label className="flex items-center space-x-2 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={excludeSeen}
-                          onChange={(e) => setExcludeSeen(e.target.checked)}
-                          className="rounded text-purple-600 focus:ring-2 focus:ring-purple-500"
-                        />
-                        <Filter className="h-4 w-4 text-gray-500 group-hover:text-purple-600 transition" />
-                        <span className="text-sm text-gray-700 font-medium">
-                          Hide routes I've already done
-                        </span>
-                      </label>
-                    </div>
-                  )}
                 </div>
 
                 {/* Recommendations List */}
                 <div className="p-5">
                   {recLoading ? (
                     <div className="flex flex-col items-center justify-center py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
-                      <p className="text-gray-600">Finding best matches...</p>
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-800 mb-4"></div>
+                      <p className="text-slate-600">Searching vector space...</p>
                     </div>
                   ) : recommendations.length === 0 ? (
                     <div className="text-center py-12">
-                      <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 font-medium">No recommendations found</p>
-                      <p className="text-gray-400 text-sm mt-1">Try adjusting your filters</p>
+                      <TrendingUp className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+                      <p className="text-slate-500 font-medium">No recommendations found</p>
+                      <p className="text-slate-400 text-sm mt-1">Try adjusting your filters</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      <div className="text-sm font-semibold text-gray-700 mb-3">
-                        Top {recommendations.length} Similar Routes:
-                      </div>
+                    <div className="space-y-2.5">
                       {recommendations.map((rec, index) => {
                         const isNew = !previousRecs.includes(rec.activity_id);
                         const scorePercent = (rec.score * 100).toFixed(1);
+                        const meta = rec.metadata;
                         
                         return (
                           <div
                             key={`${rec.activity_id}-${index}`}
-                            className={`p-4 rounded-lg border-2 transition-all ${
+                            className={`p-4 rounded-lg border transition-all ${
                               isNew 
-                                ? 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50' 
-                                : 'border-gray-200 bg-white hover:border-gray-300'
+                                ? 'border-emerald-400 bg-emerald-50' 
+                                : 'border-slate-200 bg-white hover:border-slate-300'
                             }`}
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3 flex-1">
-                                <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ${
-                                  isNew ? 'bg-gradient-to-br from-green-500 to-emerald-600' :
-                                  index === 0 ? 'bg-gradient-to-br from-yellow-500 to-orange-500' :
-                                  'bg-gradient-to-br from-blue-500 to-purple-500'
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start space-x-3 flex-1 min-w-0">
+                                <span className={`flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold ${
+                                  isNew ? 'bg-emerald-600 text-white' :
+                                  index === 0 ? 'bg-slate-900 text-white' :
+                                  'bg-slate-200 text-slate-700'
                                 }`}>
                                   {index + 1}
                                 </span>
                                 
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center space-x-2 mb-1">
-                                    <span className="font-mono font-bold text-gray-900">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <span className="font-mono font-bold text-slate-900 text-sm">
                                       {rec.activity_id}
                                     </span>
                                     {isNew && (
-                                      <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full font-bold">
+                                      <span className="text-xs bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold">
                                         NEW
                                       </span>
                                     )}
                                   </div>
                                   
-                                  {rec.metadata && (
-                                    <div className="flex items-center space-x-3 text-xs text-gray-600">
-                                      {rec.metadata.distance_km && (
-                                        <span>📏 {rec.metadata.distance_km.toFixed(1)}km</span>
+                                  {meta && (
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600">
+                                      {meta.distance_km && (
+                                        <div><span className="text-slate-500">Distance:</span> <span className="font-medium">{meta.distance_km.toFixed(1)}km</span></div>
                                       )}
-                                      {rec.metadata.surface_type && (
-                                        <span>🛤️ {rec.metadata.surface_type}</span>
+                                      {meta.surface_type && (
+                                        <div><span className="text-slate-500">Surface:</span> <span className="font-medium capitalize">{meta.surface_type}</span></div>
                                       )}
-                                      {rec.metadata.elevation_m > 0 && (
-                                        <span>⛰️ {Math.round(rec.metadata.elevation_m)}m</span>
+                                      {meta.elevation_m > 0 && (
+                                        <div><span className="text-slate-500">Elevation:</span> <span className="font-medium">{Math.round(meta.elevation_m)}m</span></div>
+                                      )}
+                                      {meta.grade_percent !== undefined && (
+                                        <div><span className="text-slate-500">Grade:</span> <span className="font-medium">{meta.grade_percent.toFixed(1)}%</span></div>
+                                      )}
+                                      {meta.difficulty_score !== undefined && (
+                                        <div><span className="text-slate-500">Difficulty:</span> <span className="font-medium">{meta.difficulty_score.toFixed(2)}/10</span></div>
+                                      )}
+                                      {meta.is_loop !== undefined && (
+                                        <div>
+                                          <span className={`font-medium ${meta.is_loop ? 'text-blue-700' : 'text-slate-600'}`}>
+                                            {meta.is_loop ? '↻ Loop' : '↔ Out & Back'}
+                                          </span>
+                                        </div>
                                       )}
                                     </div>
                                   )}
                                 </div>
                               </div>
                               
-                              <div className="text-right ml-4">
-                                <div className="text-sm font-bold text-gray-900">
+                              <div className="text-right ml-4 flex-shrink-0">
+                                <div className="text-sm font-bold text-slate-900 mb-1">
                                   {scorePercent}%
                                 </div>
-                                <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
+                                <div className="w-16 bg-slate-200 rounded-full h-1.5">
                                   <div
-                                    className={`h-2 rounded-full transition-all ${
-                                      isNew ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 
-                                      'bg-gradient-to-r from-blue-500 to-purple-500'
+                                    className={`h-1.5 rounded-full transition-all ${
+                                      isNew ? 'bg-emerald-600' : 'bg-slate-700'
                                     }`}
                                     style={{ width: `${Math.min(100, rec.score * 100)}%` }}
                                   />
@@ -593,12 +572,12 @@ function Demo() {
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 bg-gray-50 border-t border-gray-200">
-                  <div className="flex items-center justify-between text-xs text-gray-600">
-                    <span className="font-semibold">
-                      ⚡ FAISS Vector Search {strategy.includes('mmr') && `+ MMR (λ=${lambdaDiversity})`}
+                <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 rounded-b-lg">
+                  <div className="flex items-center justify-between text-xs text-slate-600">
+                    <span className="font-mono">
+                      FAISS Vector Search {strategy.includes('mmr') && `+ MMR (λ=${lambdaDiversity})`}
                     </span>
-                    <span className="font-mono bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="bg-white px-2 py-1 rounded border border-slate-200 font-mono text-slate-700">
                       {strategy}
                     </span>
                   </div>
@@ -608,16 +587,16 @@ function Demo() {
 
             {/* Empty State */}
             {activities.length === 0 && (
-              <div className="bg-white rounded-xl shadow-lg p-12 text-center border border-gray-100">
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center border border-slate-200">
                 <div className="max-w-md mx-auto">
-                  <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                    <Users className="h-12 w-12 text-blue-600" />
+                  <div className="bg-slate-100 rounded-lg p-6 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                    <Users className="h-10 w-10 text-slate-600" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                    Ready to Test?
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">
+                    Ready to Test
                   </h3>
-                  <p className="text-gray-600 mb-6">
-                    Select a demo user and click "Load Demo Data" to start exploring AI-powered route recommendations.
+                  <p className="text-slate-600 text-sm">
+                    Select a demo user and load their activities to start testing the recommendation algorithms.
                   </p>
                 </div>
               </div>

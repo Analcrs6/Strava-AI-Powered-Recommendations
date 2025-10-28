@@ -75,7 +75,12 @@ function Dashboard() {
             <div className="bg-white rounded-xl p-12 text-center">
               <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No activities yet</h3>
-              <p className="text-gray-600 mb-6">Start tracking your workouts to see recommendations</p>
+              <p className="text-gray-600 mb-4">Start tracking your workouts to get personalized recommendations</p>
+              <p className="text-sm text-slate-500 mb-6">
+                • Record or create activities to build your history<br/>
+                • Get AI-powered route suggestions based on your patterns<br/>
+                • Discover what to do next
+              </p>
               <Link 
                 to="/create"
                 className="inline-block bg-strava-orange text-white px-6 py-3 rounded-lg hover:bg-strava-orange-dark transition"

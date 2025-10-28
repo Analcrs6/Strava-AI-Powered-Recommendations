@@ -1,24 +1,33 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { recommendAPI } from '../services/api';
-import { TrendingUp, AlertCircle, Settings, Sliders } from 'lucide-react';
+import { TrendingUp, AlertCircle, Settings, Sliders, Zap } from 'lucide-react';
 import { formatDistance, formatDuration, getSportIcon } from '../utils/format';
 
 function RecommendationsPanel({ selectedActivity }) {
+  const { user } = useAuth();
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [strategy, setStrategy] = useState('content_mmr');
   const [lambdaDiversity, setLambdaDiversity] = useState(0.3);
   const [metadata, setMetadata] = useState(null);
+  const [recommendMode, setRecommendMode] = useState('similar'); // 'similar' or 'next'
 
   useEffect(() => {
     if (selectedActivity) {
-      loadRecommendations(selectedActivity.id);
+      if (recommendMode === 'similar') {
+        loadRecommendations(selectedActivity.id);
+      } else {
+        loadNextActivity();
+      }
+    } else if (recommendMode === 'next' && user) {
+      loadNextActivity();
     } else {
       setRecommendations([]);
       setMetadata(null);
     }
-  }, [selectedActivity, strategy, lambdaDiversity]);
+  }, [selectedActivity, strategy, lambdaDiversity, recommendMode]);
 
   const loadRecommendations = async (activityId) => {
     setLoading(true);
@@ -40,23 +49,73 @@ function RecommendationsPanel({ selectedActivity }) {
     }
   };
 
-  if (!selectedActivity) {
+  const loadNextActivity = async () => {
+    if (!user?.id) {
+      setError('Please sign in to get personalized predictions');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await recommendAPI.getNextActivity(
+        user.id,
+        10,
+        strategy,
+        lambdaDiversity
+      );
+      setRecommendations(response.data.items);
+      setMetadata(response.data.metadata);
+    } catch (err) {
+      console.error('Error loading next activity:', err);
+      setError('Failed to load next activity predictions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!selectedActivity && recommendMode === 'similar') {
     return (
       <div className="bg-white rounded-xl p-8 text-center sticky top-8">
-        <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Similar Activities</h3>
-        <p className="text-gray-600 text-sm">
-          Select an activity to find similar workouts using our recommender system
+        <TrendingUp className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">AI Recommendations</h3>
+        <p className="text-slate-600 text-sm mb-4">
+          • Select an activity to find similar workouts<br/>
+          • Or create/record a new activity to get next-route predictions
         </p>
+        {user && (
+          <button
+            onClick={() => setRecommendMode('next')}
+            className="mt-2 bg-slate-800 text-white px-4 py-2 rounded-md text-sm hover:bg-slate-900 transition flex items-center space-x-2 mx-auto"
+          >
+            <Zap className="h-4 w-4" />
+            <span>What to Do Next?</span>
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm sticky top-8">
-      <div className="flex items-center space-x-2 mb-4">
-        <TrendingUp className="h-6 w-6 text-strava-orange" />
-        <h3 className="text-xl font-bold text-gray-900">Similar Activities</h3>
+      {/* Mode Toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          {recommendMode === 'similar' ? (
+            <TrendingUp className="h-6 w-6 text-strava-orange" />
+          ) : (
+            <Zap className="h-6 w-6 text-green-600" />
+          )}
+          <h3 className="text-xl font-bold text-gray-900">
+            {recommendMode === 'similar' ? 'Similar Routes' : 'What to Do Next'}
+          </h3>
+        </div>
+        <button
+          onClick={() => setRecommendMode(recommendMode === 'similar' ? 'next' : 'similar')}
+          className="text-xs bg-slate-100 text-slate-700 px-3 py-1 rounded-md hover:bg-slate-200 transition"
+        >
+          {recommendMode === 'similar' ? '→ Next Activity' : '← Find Similar'}
+        </button>
       </div>
 
       {/* Strategy Selector */}

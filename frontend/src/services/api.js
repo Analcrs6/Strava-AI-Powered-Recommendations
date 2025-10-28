@@ -30,6 +30,10 @@ export const recommendAPI = {
       exclude_seen: excludeSeen,
       user_id: userId
     }),
+  getNextActivity: (userId, topK = 10, strategy = 'content_mmr', lambdaDiversity = 0.3) =>
+    api.post('/recommend/next-activity', null, {
+      params: { user_id: userId, top_k: topK, strategy, lambda_diversity: lambdaDiversity }
+    }),
   rebuildIndex: () => api.post('/recommend/rebuild'),
   getStrategies: () => api.get('/recommend/strategies'),
 };

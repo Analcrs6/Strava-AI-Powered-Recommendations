@@ -304,9 +304,10 @@ function RecordActivity() {
                 <div className={`px-3 py-2 rounded-lg text-xs font-semibold ${
                   gpsAccuracy < 20 ? 'bg-green-600 text-white' :
                   gpsAccuracy < 50 ? 'bg-yellow-600 text-white' :
+                  gpsAccuracy < 500 ? 'bg-orange-600 text-white' :
                   'bg-red-600 text-white'
                 }`}>
-                  GPS Accuracy: ±{Math.round(gpsAccuracy)}m
+                  GPS Accuracy: {gpsAccuracy < 500 ? `±${Math.round(gpsAccuracy)}m` : 'Poor (Searching...)'}
                 </div>
               )}
               

@@ -222,6 +222,106 @@ def get_index_info():
             "error": str(e)
         }
 
+@router.post("/next-activity")
+def recommend_next_activity(
+    user_id: str,
+    top_k: int = 10,
+    strategy: str = "content_mmr",
+    lambda_diversity: float = 0.3,
+    db: Session = Depends(get_db)
+):
+    """
+    Recommend the NEXT activity to do based on user's activity history.
+    This is predictive - suggests what to do next based on patterns.
+    """
+    try:
+        # Get user's recent activities (last 10)
+        user_activities = db.query(models.Activity).filter(
+            models.Activity.user_id == user_id
+        ).order_by(models.Activity.created_at.desc()).limit(10).all()
+        
+        if not user_activities:
+            # No history - return popular routes
+            print(f"🔍 No activity history for user {user_id}, returning popular routes")
+            return recommend(RecommendRequest(
+                activity_id=None,
+                top_k=top_k,
+                strategy="popularity",
+                lambda_diversity=lambda_diversity,
+                exclude_seen=False,
+                user_id=user_id
+            ), db)
+        
+        # Get the most recent activity
+        last_activity = user_activities[0]
+        print(f"🎯 Predicting next activity based on last activity: {last_activity.id}")
+        
+        # Calculate average stats from user history to understand their patterns
+        avg_distance = sum(a.distance_m for a in user_activities) / len(user_activities)
+        avg_elevation = sum(a.elevation_gain_m or 0 for a in user_activities) / len(user_activities)
+        
+        # Get sport preferences (what they do most)
+        sport_counts = {}
+        for activity in user_activities:
+            sport = activity.sport
+            sport_counts[sport] = sport_counts.get(sport, 0) + 1
+        preferred_sport = max(sport_counts, key=sport_counts.get)
+        
+        print(f"📊 User patterns: avg_distance={avg_distance:.0f}m, avg_elevation={avg_elevation:.0f}m, preferred_sport={preferred_sport}")
+        
+        # Get recommendations based on last activity but filter to similar difficulty/length
+        recommendations = recommend(RecommendRequest(
+            activity_id=last_activity.id,
+            top_k=top_k * 3,  # Get more to filter
+            strategy=strategy,
+            lambda_diversity=lambda_diversity,
+            exclude_seen=True,  # Always exclude seen for next activity
+            user_id=user_id
+        ), db)
+        
+        # Filter recommendations to match user's typical pattern
+        # Look for routes that are:
+        # - Similar sport type (or progression to harder variants)
+        # - Within reasonable range of their average (not too easy, not too hard)
+        filtered_recs = []
+        for rec in recommendations.items:
+            if rec.metadata:
+                # Check if distance is within 50% to 150% of their average
+                rec_distance = rec.metadata.distance_km * 1000
+                if avg_distance * 0.5 <= rec_distance <= avg_distance * 1.5:
+                    filtered_recs.append(rec)
+        
+        # If we filtered too much, use all recommendations
+        if len(filtered_recs) < top_k:
+            filtered_recs = recommendations.items
+        
+        # Take top K
+        final_recs = filtered_recs[:top_k]
+        
+        print(f"✅ Returning {len(final_recs)} next activity recommendations")
+        
+        return RecommendResponse(
+            items=final_recs,
+            metadata={
+                "strategy": "next_activity",
+                "based_on": last_activity.id,
+                "user_pattern": {
+                    "avg_distance_m": int(avg_distance),
+                    "avg_elevation_m": int(avg_elevation),
+                    "preferred_sport": preferred_sport,
+                    "total_activities": len(user_activities)
+                },
+                "description": f"Predicted next activities based on your recent {len(user_activities)} workouts"
+            }
+        )
+        
+    except Exception as e:
+        print(f"❌ Error in next activity recommendation: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, f"Failed to generate next activity recommendations: {str(e)}")
+
+
 @router.get("/strategies")
 def get_strategies():
     """Get information about available recommendation strategies."""
