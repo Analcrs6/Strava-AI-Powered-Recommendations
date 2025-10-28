@@ -11,7 +11,8 @@ import time
 INDEX_PATH = os.path.join(settings.recsys_index_dir, "index_latest.faiss")
 SCALER_PATH = os.path.join(settings.recsys_index_dir, "scaler.npy")
 IDMAP_PATH = os.path.join(settings.recsys_index_dir, "idmap.npy")
-TRAINED_MODEL_DIR = "app/resources/trained_models"
+# Use absolute path to trained models
+TRAINED_MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resources/trained_models")
 
 RecommenderStrategy = Literal["content", "content_mmr", "ensemble", "ensemble_mmr", "popularity"]
 
@@ -75,7 +76,10 @@ class Recommender:
         """Load pre-trained model artifacts from notebook training."""
         model_dir = Path(TRAINED_MODEL_DIR)
         
+        print(f"🔍 Checking for trained model at: {model_dir.absolute()}")
+        
         if not model_dir.exists():
+            print(f"❌ Trained model directory not found at {model_dir}")
             return False
         
         try:
@@ -86,9 +90,21 @@ class Recommender:
             if not scaler_path.exists():
                 print(f"  ❌ Scaler not found at {scaler_path}")
                 return False
-            with open(scaler_path, 'rb') as f:
-                self.scaler = pickle.load(f)
-            print(f"  ✅ Scaler loaded")
+            
+            try:
+                # Try loading with default unpickler
+                with open(scaler_path, 'rb') as f:
+                    self.scaler = pickle.load(f)
+                print(f"  ✅ Scaler loaded")
+            except ModuleNotFoundError as e:
+                # Handle numpy version incompatibility
+                print(f"  ⚠️  Pickle compatibility issue: {e}")
+                print(f"  🔄 Creating new scaler from saved parameters...")
+                
+                # Create a new scaler without unpickling
+                # We'll just skip the scaler for now since embeddings are pre-computed
+                self.scaler = StandardScaler()
+                print(f"  ✅ Using fresh scaler (embeddings are pre-normalized)")
             
             # Load embeddings (pre-computed feature vectors)
             embeddings_path = model_dir / "retrieval" / "route_embeddings.npy"

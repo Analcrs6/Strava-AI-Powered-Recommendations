@@ -50,6 +50,17 @@ export const demoAPI = {
   loadData: (userId) => api.post('/demo/load', { user_id: userId }),
   clearSession: (sessionId) => api.post('/demo/clear', { session_id: sessionId }),
   getStats: () => api.get('/demo/stats'),
+  getActivities: (skip = 0, limit = 50, userId = null) => 
+    api.get('/demo/activities', { params: { skip, limit, user_id: userId } }),
+  getRecommendations: (activityId, k = 10, strategy = 'content_mmr', lambdaDiversity = 0.3, excludeSeen = false, userId = null) => 
+    api.post('/demo/recommend', { 
+      activity_id: activityId, 
+      k,
+      strategy,
+      lambda_diversity: lambdaDiversity,
+      exclude_seen: excludeSeen,
+      user_id: userId
+    }),
 };
 
 export const socialAPI = {

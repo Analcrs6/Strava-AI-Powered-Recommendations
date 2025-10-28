@@ -12,11 +12,12 @@ alembic==1.12.1
 # Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1  # Pin bcrypt version for passlib compatibility
 python-dotenv==1.0.0
 slowapi==0.1.9  # Rate limiting
 
 # Machine Learning & Recommendations
-numpy==1.24.3
+numpy==1.26.4  # Latest 1.x version, better pickle compatibility
 pandas==2.0.3
 scikit-learn==1.3.2
 faiss-cpu==1.7.4

@@ -293,6 +293,42 @@ def clear_demo_data(db: Session = Depends(get_demo_db)):
         raise HTTPException(500, f"Failed to clear demo data: {str(e)}")
 
 
+@router.get("/activities")
+def get_demo_activities(
+    skip: int = 0,
+    limit: int = 50,
+    user_id: Optional[str] = None,
+    db: Session = Depends(get_demo_db)
+):
+    """Get activities from demo database."""
+    check_demo_enabled()
+    
+    try:
+        query = db.query(models.Activity)
+        
+        if user_id:
+            query = query.filter(models.Activity.user_id == user_id)
+        
+        activities = query.order_by(models.Activity.created_at.desc()).offset(skip).limit(limit).all()
+        
+        return [
+            {
+                "id": activity.id,
+                "user_id": activity.user_id,
+                "sport": activity.sport,
+                "distance_m": activity.distance_m,
+                "duration_s": activity.duration_s,
+                "elevation_gain_m": activity.elevation_gain_m,
+                "hr_avg": activity.hr_avg,
+                "created_at": activity.created_at.isoformat() if activity.created_at else None
+            }
+            for activity in activities
+        ]
+    except Exception as e:
+        print(f"Error getting demo activities: {e}")
+        raise HTTPException(500, f"Failed to get demo activities: {str(e)}")
+
+
 @router.get("/stats")
 def get_demo_stats(db: Session = Depends(get_demo_db)):
     """Get statistics about demo database."""
@@ -329,3 +365,133 @@ def get_demo_stats(db: Session = Depends(get_demo_db)):
         import traceback
         traceback.print_exc()
         raise HTTPException(500, f"Failed to get demo stats: {str(e)}")
+
+
+@router.post("/recommend", response_model=RecommendResponse)
+def demo_recommend(req: RecommendRequest, db: Session = Depends(get_demo_db)):
+    """
+    Get recommendations using demo database.
+    Same as /recommend but queries demo database for activity data.
+    """
+    check_demo_enabled()
+    
+    if not req.activity_id:
+        raise HTTPException(400, "activity_id is required")
+    
+    # Validate strategy
+    valid_strategies = ["content", "content_mmr", "ensemble", "ensemble_mmr", "popularity"]
+    if req.strategy not in valid_strategies:
+        raise HTTPException(400, f"Invalid strategy. Must be one of: {valid_strategies}")
+    
+    # Validate lambda_diversity
+    if not (0.0 <= req.lambda_diversity <= 1.0):
+        raise HTTPException(400, "lambda_diversity must be between 0.0 and 1.0")
+    
+    try:
+        # Extract route ID from activity ID
+        activity_id_for_search = req.activity_id
+        
+        # Remove demo session suffix if present
+        if "_demo_" in req.activity_id:
+            parts = req.activity_id.split("_demo_")
+            activity_id_for_search = parts[0]
+            print(f"🔍 Demo activity detected: {req.activity_id} → {activity_id_for_search}")
+        
+        # Extract just the route ID (format: "userid_R049" → "R049")
+        if "_" in activity_id_for_search:
+            id_parts = activity_id_for_search.split("_")
+            for part in id_parts:
+                if part.startswith("R") or part.isdigit():
+                    route_id = part
+                    print(f"🔍 Extracted route ID: {activity_id_for_search} → {route_id}")
+                    activity_id_for_search = route_id
+                    break
+        
+        print(f"🔍 [DEMO] Final search ID: {activity_id_for_search}")
+        print(f"⚙️  [DEMO] Strategy: {req.strategy}, Lambda: {req.lambda_diversity}, K: {req.k}")
+        
+        # Get recommendations from FAISS
+        recsys.ensure_ready()
+        items = recsys.search_by_activity(
+            activity_id_for_search, 
+            req.k,
+            strategy=req.strategy,
+            lambda_diversity=req.lambda_diversity
+        )
+        
+        print(f"📊 [DEMO] Returned {len(items)} items using strategy: {req.strategy}")
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ [DEMO] Recommendation error: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(500, f"Recommendation failed: {str(e)}")
+    
+    # Add metadata
+    metadata = {
+        "description": f"Demo recommendation using {req.strategy}",
+        "uses_mmr": "mmr" in req.strategy,
+        "query_route_id": activity_id_for_search,
+        "demo_mode": True
+    }
+    
+    # Filter out seen routes if requested (using DEMO database)
+    filtered_items = items
+    seen_routes = set()
+    
+    if req.exclude_seen and req.user_id:
+        try:
+            # Get user's activity history from DEMO database
+            user_activities = db.query(models.Activity).filter(
+                models.Activity.user_id == req.user_id
+            ).all()
+            
+            print(f"🔍 [DEMO] Found {len(user_activities)} activities for user {req.user_id} in demo database")
+            
+            # Extract route IDs from activity IDs
+            for activity in user_activities:
+                act_id = activity.id
+                if "_" in act_id:
+                    parts = act_id.split("_")
+                    for part in parts:
+                        if part.startswith("R") or part.isdigit():
+                            seen_routes.add(part)
+                            break
+                else:
+                    seen_routes.add(act_id)
+            
+            print(f"🚫 [DEMO] Filtering {len(seen_routes)} seen routes for user {req.user_id}")
+            
+            # Filter recommendations
+            filtered_items = [(aid, score) for aid, score in items if aid not in seen_routes]
+            
+            if len(filtered_items) < len(items):
+                print(f"   [DEMO] Filtered: {len(items)} → {len(filtered_items)} recommendations")
+        except Exception as e:
+            print(f"⚠️  [DEMO] Error filtering seen routes: {e}")
+            # Continue with unfiltered results
+    
+    # Enrich items with route metadata
+    enriched_items = []
+    for activity_id, score in filtered_items:
+        route_meta = recsys.get_route_metadata(activity_id)
+        if route_meta:
+            enriched_items.append(RecommendItem(
+                activity_id=activity_id,
+                score=score,
+                metadata=RouteMetadata(**route_meta)
+            ))
+        else:
+            enriched_items.append(RecommendItem(activity_id=activity_id, score=score))
+    
+    # Update metadata
+    if req.exclude_seen:
+        metadata["filtered_seen_count"] = len(items) - len(filtered_items)
+        metadata["seen_routes"] = list(seen_routes)[:5]
+    
+    return RecommendResponse(
+        items=enriched_items,
+        strategy=req.strategy,
+        lambda_diversity=req.lambda_diversity if "mmr" in req.strategy else None,
+        metadata=metadata
+    )

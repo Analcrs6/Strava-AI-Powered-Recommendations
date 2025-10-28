@@ -49,7 +49,8 @@ function Demo() {
       setStats(response.data);
       
       if (response.data.total_activities > 0) {
-        const activitiesResponse = await activitiesAPI.list(0, 50, true);
+        // Use demo activities endpoint to query demo database
+        const activitiesResponse = await demoAPI.getActivities(0, 50);
         setActivities(activitiesResponse.data);
       } else {
         setActivities([]);
@@ -127,7 +128,8 @@ function Demo() {
     setRecLoading(true);
     
     try {
-      const response = await recommendAPI.getRecommendations(
+      // Use demo API endpoint which queries the demo database
+      const response = await demoAPI.getRecommendations(
         activity.id,
         10,
         strategy,
