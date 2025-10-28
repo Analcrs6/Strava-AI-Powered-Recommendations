@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Activity, Mail, Chrome } from 'lucide-react';
+import { TrendingUp, Mail } from 'lucide-react';
 
 // Social provider icons (using Lucide icons as placeholders)
 const GoogleIcon = () => (
@@ -79,10 +79,10 @@ function Login() {
       <div className="max-w-md w-full">
         {/* Logo & Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-900 rounded-xl mb-4">
-            <Activity className="h-8 w-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-600 rounded-xl mb-4">
+            <TrendingUp className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to Strava AI</h1>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to Strava Recommender</h1>
           <p className="text-slate-600">Sign in to discover personalized route recommendations</p>
         </div>
 
@@ -179,6 +179,12 @@ function Login() {
                   />
                 </div>
 
+                <div className="flex items-center justify-between mb-4">
+                  <Link to="/forgot-password" className="text-xs text-slate-600 hover:text-slate-900 transition">
+                    Forgot password?
+                  </Link>
+                </div>
+
                 <button
                   type="submit"
                   disabled={loading}
@@ -187,13 +193,18 @@ function Login() {
                   {loading ? 'Signing in...' : 'Sign In'}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setShowEmailLogin(false)}
-                  className="w-full text-slate-600 text-sm hover:text-slate-900 transition"
-                >
-                  ← Back to social login
-                </button>
+                <div className="flex items-center justify-between mt-4 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailLogin(false)}
+                    className="text-slate-600 hover:text-slate-900 transition"
+                  >
+                    ← Back to social login
+                  </button>
+                  <Link to="/signup" className="text-orange-600 hover:text-orange-700 font-medium transition">
+                    Sign up
+                  </Link>
+                </div>
               </form>
             </>
           )}
@@ -206,9 +217,14 @@ function Login() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-sm text-slate-500 mt-6">
-          By continuing, you agree to Strava AI's Terms of Service and Privacy Policy
-        </p>
+        <div className="text-center mt-6">
+          <p className="text-sm text-slate-500 mb-2">
+            By continuing, you agree to Strava Recommender's Terms of Service and Privacy Policy
+          </p>
+          <Link to="/signup" className="text-sm text-orange-600 hover:text-orange-700 font-medium transition">
+            Don't have an account? Sign up
+          </Link>
+        </div>
       </div>
     </div>
   );

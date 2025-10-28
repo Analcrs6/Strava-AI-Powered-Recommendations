@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { socialAPI, activitiesAPI } from '../services/api';
 import { ArrowLeft, Users, Activity, TrendingUp, MapPin } from 'lucide-react';
 import { formatDistance, formatDuration } from '../utils/format';
 
@@ -16,52 +17,28 @@ function Following() {
   }, []);
 
   const loadFollowingAndActivities = async () => {
-    try {
-      // Simulate API call to get following list and their activities
-      setTimeout(() => {
-        const mockFollowing = [
-          { id: 'user1', name: 'Sarah Johnson', avatar_color: 'bg-blue-600' },
-          { id: 'user2', name: 'Mike Chen', avatar_color: 'bg-purple-600' },
-          { id: 'user3', name: 'Emma Davis', avatar_color: 'bg-green-600' }
-        ];
-        
-        const mockActivities = [
-          {
-            id: '1',
-            user: mockFollowing[0],
-            sport: 'running',
-            distance_m: 8500,
-            duration_s: 2400,
-            elevation_gain_m: 120,
-            created_at: '2 hours ago',
-            location: 'Golden Gate Park'
-          },
-          {
-            id: '2',
-            user: mockFollowing[1],
-            sport: 'cycling',
-            distance_m: 32000,
-            duration_s: 5400,
-            elevation_gain_m: 450,
-            created_at: '5 hours ago',
-            location: 'Mountain Loop'
-          },
-          {
-            id: '3',
-            user: mockFollowing[2],
-            sport: 'hiking',
-            distance_m: 12000,
-            duration_s: 7200,
-            elevation_gain_m: 850,
-            created_at: '1 day ago',
-            location: 'Mt. Tam Trail'
-          }
-        ];
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-        setFollowing(mockFollowing);
-        setActivities(mockActivities);
-        setLoading(false);
-      }, 1000);
+    try {
+      // Get following list from API
+      const followingResponse = await socialAPI.getFollowing(user.id);
+      const followingList = followingResponse.data || [];
+      setFollowing(followingList);
+
+      // Get activities from followed users
+      // In production, this would be a dedicated endpoint for activity feed
+      const activitiesResponse = await activitiesAPI.list(0, 50);
+      const allActivities = activitiesResponse.data || [];
+      
+      // Filter to only show activities from followed users
+      const followedIds = new Set(followingList.map(f => f.id));
+      const filteredActivities = allActivities.filter(a => followedIds.has(a.user_id));
+      
+      setActivities(filteredActivities);
+      setLoading(false);
     } catch (error) {
       console.error('Error loading following:', error);
       setLoading(false);

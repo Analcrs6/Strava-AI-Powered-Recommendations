@@ -254,7 +254,7 @@ function CreateActivity() {
           <li>• Use unique activity IDs to avoid conflicts</li>
           <li>• Distance should be in meters (1 km = 1000 m)</li>
           <li>• Duration should be in seconds (30 min = 1800 s)</li>
-          <li>• AI recommendations work better with similar distance/duration activities</li>
+          <li>• Recommendations work better with similar distance/duration activities</li>
         </ul>
       </div>
     </div>

@@ -78,7 +78,7 @@ function Dashboard() {
               <p className="text-gray-600 mb-4">Start tracking your workouts to get personalized recommendations</p>
               <p className="text-sm text-slate-500 mb-6">
                 • Record or create activities to build your history<br/>
-                • Get AI-powered route suggestions based on your patterns<br/>
+                • Get personalized route suggestions based on your patterns<br/>
                 • Discover what to do next
               </p>
               <Link 

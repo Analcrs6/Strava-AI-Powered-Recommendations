@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, User, Camera, Save } from 'lucide-react';
+import { ArrowLeft, User, Camera, Save, Trash2, AlertTriangle } from 'lucide-react';
 
 function Settings() {
   const navigate = useNavigate();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -48,6 +50,22 @@ function Settings() {
         type: 'error',
         text: 'Failed to update profile'
       });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    
+    try {
+      // Simulate API call to delete account
+      setTimeout(() => {
+        logout();
+        navigate('/');
+        setDeleteLoading(false);
+      }, 1500);
+    } catch (error) {
+      setDeleteLoading(false);
+      alert('Failed to delete account. Please try again.');
     }
   };
 
@@ -188,6 +206,62 @@ function Settings() {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* Danger Zone - Delete Account */}
+        <div className="bg-white rounded-lg shadow-sm border-2 border-red-200 mt-6">
+          <div className="p-6 border-b border-red-200 bg-red-50">
+            <div className="flex items-center space-x-3">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+              <h2 className="text-xl font-bold text-red-900">Danger Zone</h2>
+            </div>
+          </div>
+
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Delete Account</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Once you delete your account, there is no going back. This action is permanent and will delete:
+            </p>
+            <ul className="text-sm text-slate-600 mb-6 space-y-1 list-disc list-inside">
+              <li>All your activities and routes</li>
+              <li>Your profile and account information</li>
+              <li>All your followers and following connections</li>
+              <li>Your messages and notifications</li>
+            </ul>
+
+            {!showDeleteConfirm ? (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center space-x-2 bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete My Account</span>
+              </button>
+            ) : (
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                <p className="text-sm font-semibold text-red-900 mb-4">
+                  ⚠️ Are you absolutely sure? This action cannot be undone.
+                </p>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleteLoading}
+                    className="flex items-center space-x-2 bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>{deleteLoading ? 'Deleting...' : 'Yes, Delete Forever'}</span>
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={deleteLoading}
+                    className="px-6 py-2 border-2 border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

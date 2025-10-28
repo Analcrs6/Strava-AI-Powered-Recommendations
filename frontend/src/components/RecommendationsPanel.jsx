@@ -78,7 +78,7 @@ function RecommendationsPanel({ selectedActivity }) {
     return (
       <div className="bg-white rounded-xl p-8 text-center sticky top-8">
         <TrendingUp className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">AI Recommendations</h3>
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">Route Recommendations</h3>
         <p className="text-slate-600 text-sm mb-4">
           • Select an activity to find similar workouts<br/>
           • Or create/record a new activity to get next-route predictions

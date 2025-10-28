@@ -123,9 +123,9 @@ function Messages() {
   );
 
   return (
-    <div className="h-screen bg-slate-50 flex flex-col">
+    <div className="h-screen bg-slate-50 flex flex-col fixed inset-0 z-50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-4 py-4">
+      <div className="bg-white border-b border-slate-200 px-4 py-4 flex-shrink-0">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <button
@@ -141,7 +141,7 @@ function Messages() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Conversations List */}
         <div className="w-80 bg-white border-r border-slate-200 flex flex-col">
           {/* Search */}
