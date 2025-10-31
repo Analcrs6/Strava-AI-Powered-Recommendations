@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, DECIMAL
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
@@ -33,9 +33,12 @@ class User(Base):
     # A/B Testing
     ab_test_group = Column(String, nullable=True)  # Which A/B test group the user is in
     
-    # Real-time location sharing for mutual followers
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
+    # Real-time location sharing for mutual followers (high-precision)
+    latitude = Column(DECIMAL(10, 8), nullable=True)  # ±90.00000000 (~1.1mm precision)
+    longitude = Column(DECIMAL(11, 8), nullable=True)  # ±180.00000000 (~1.1mm precision)
+    location_accuracy = Column(DECIMAL(8, 2), nullable=True)  # Accuracy in meters
+    location_source = Column(String(50), nullable=True)  # 'gps', 'network', 'manual'
+    proximity_threshold = Column(Integer, default=500)  # Custom threshold in meters (100-2000)
     last_location_update = Column(DateTime, nullable=True)
     location_sharing_enabled = Column(Boolean, default=False)
     
@@ -163,4 +166,88 @@ class Notification(Base):
     read = Column(Boolean, default=False, index=True)
     
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class LocationHistory(Base):
+    """Track user location history for movement validation"""
+    __tablename__ = "location_history"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    # High-precision coordinates
+    latitude = Column(DECIMAL(10, 8), nullable=False)
+    longitude = Column(DECIMAL(11, 8), nullable=False)
+    
+    # Location metadata
+    accuracy = Column(DECIMAL(8, 2), nullable=True)  # Accuracy in meters
+    source = Column(String(50), nullable=True)  # 'gps', 'network', 'manual'
+    altitude = Column(DECIMAL(8, 2), nullable=True)  # Altitude in meters
+    speed = Column(DECIMAL(8, 2), nullable=True)  # Speed in m/s
+    heading = Column(DECIMAL(6, 2), nullable=True)  # Direction in degrees (0-360)
+    
+    # Movement validation
+    distance_from_previous = Column(DECIMAL(10, 2), nullable=True)
+    time_from_previous = Column(Integer, nullable=True)
+    speed_calculated = Column(DECIMAL(8, 2), nullable=True)
+    is_valid = Column(Boolean, default=True)
+    
+    # Timestamps
+    recorded_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+
+class ProximityEvent(Base):
+    """Track proximity events for notification management"""
+    __tablename__ = "proximity_events"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    nearby_user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    
+    # Event details
+    event_type = Column(String(20), nullable=False)  # 'entered', 'exited', 'within'
+    distance_meters = Column(DECIMAL(10, 2), nullable=False)
+    threshold_meters = Column(Integer, nullable=False)
+    
+    # User locations at time of event
+    user_latitude = Column(DECIMAL(10, 8), nullable=False)
+    user_longitude = Column(DECIMAL(11, 8), nullable=False)
+    nearby_latitude = Column(DECIMAL(10, 8), nullable=False)
+    nearby_longitude = Column(DECIMAL(11, 8), nullable=False)
+    
+    # Notification tracking
+    notification_sent = Column(Boolean, default=False, index=True)
+    notification_sent_at = Column(DateTime, nullable=True)
+    
+    # Timestamps
+    detected_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+
+class UserLocationPreference(Base):
+    """User preferences for location sharing and notifications"""
+    __tablename__ = "user_location_preferences"
+    
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    
+    # Proximity notification preferences
+    notify_on_proximity = Column(Boolean, default=True)
+    proximity_cooldown_minutes = Column(Integer, default=30)
+    notify_only_favorites = Column(Boolean, default=False)
+    
+    # Location sharing preferences
+    share_with_all_mutual = Column(Boolean, default=True)
+    share_accuracy = Column(Boolean, default=True)
+    
+    # Movement tracking preferences
+    min_movement_meters = Column(Integer, default=10)
+    max_update_frequency_seconds = Column(Integer, default=30)
+    
+    # Privacy settings
+    ghost_mode = Column(Boolean, default=False)
+    visible_distance_limit = Column(Integer, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

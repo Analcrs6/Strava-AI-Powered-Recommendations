@@ -7,6 +7,7 @@ __pycache__/
 /data/
 tokens.json
 .env
+.kiro/
 
 # Trained models (large files)
 app/resources/trained_models/

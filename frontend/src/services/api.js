@@ -81,12 +81,31 @@ export const socialAPI = {
 };
 
 export const locationAPI = {
-  updateLocation: (userId, latitude, longitude, sharingEnabled = true) =>
-    api.post('/location/update', { user_id: userId, latitude, longitude, sharing_enabled: sharingEnabled }),
-  getMutualFollowersLocations: (userId, maxDistanceKm = 50) =>
-    api.get(`/location/mutual-followers/${userId}`, { params: { max_distance_km: maxDistanceKm } }),
-  checkProximityNotifications: (userId, proximityThresholdKm = 5) =>
-    api.get(`/location/proximity-check/${userId}`, { params: { proximity_threshold_km: proximityThresholdKm } }),
+  updateLocation: (userId, latitude, longitude, sharingEnabled = true, accuracy = null, source = null, altitude = null, speed = null, heading = null) =>
+    api.post('/location/update', { 
+      user_id: userId, 
+      latitude, 
+      longitude, 
+      sharing_enabled: sharingEnabled,
+      accuracy,
+      source,
+      altitude,
+      speed,
+      heading
+    }),
+  getMutualFollowersLocations: (userId, maxDistanceMeters = 50000, useVincenty = true) =>
+    api.get(`/location/mutual-followers/${userId}`, { 
+      params: { 
+        max_distance_meters: maxDistanceMeters,
+        use_vincenty: useVincenty
+      } 
+    }),
+  checkProximityNotifications: (userId, proximityThresholdMeters = 500) =>
+    api.get(`/location/proximity-check/${userId}`, { 
+      params: { 
+        proximity_threshold_meters: proximityThresholdMeters
+      } 
+    }),
   toggleLocationSharing: (userId, enabled) =>
     api.post(`/location/toggle-sharing/${userId}`, null, { params: { enabled } }),
 };
