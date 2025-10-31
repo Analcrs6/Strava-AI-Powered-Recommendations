@@ -2,48 +2,99 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { socialAPI, activitiesAPI } from '../services/api';
-import { ArrowLeft, Users, Activity, TrendingUp, MapPin } from 'lucide-react';
+import { ArrowLeft, Users, Activity, TrendingUp, MapPin, Heart, MessageSquare } from 'lucide-react';
 import { formatDistance, formatDuration } from '../utils/format';
+
+// Dummy data for following
+const DUMMY_FOLLOWING = [
+  { id: 'user_sarah_123', name: 'Sarah Johnson', avatar_color: 'bg-blue-600', location: 'San Francisco, CA' },
+  { id: 'user_mike_456', name: 'Mike Chen', avatar_color: 'bg-green-600', location: 'Oakland, CA' },
+  { id: 'user_emma_789', name: 'Emma Davis', avatar_color: 'bg-purple-600', location: 'Berkeley, CA' },
+  { id: 'user_alex_321', name: 'Alex Martinez', avatar_color: 'bg-orange-600', location: 'San Jose, CA' },
+  { id: 'user_john_654', name: 'John Smith', avatar_color: 'bg-red-600', location: 'Palo Alto, CA' }
+];
+
+// Dummy activities from followed users
+const DUMMY_ACTIVITIES = [
+  {
+    id: 'act_1',
+    user_id: 'user_sarah_123',
+    user: { id: 'user_sarah_123', name: 'Sarah Johnson', avatar_color: 'bg-blue-600' },
+    sport: 'running',
+    distance_m: 8500,
+    duration_s: 2580,
+    elevation_gain_m: 85,
+    location: 'Golden Gate Park',
+    created_at: '2 hours ago',
+    likes: 12,
+    comments: 3
+  },
+  {
+    id: 'act_2',
+    user_id: 'user_mike_456',
+    user: { id: 'user_mike_456', name: 'Mike Chen', avatar_color: 'bg-green-600' },
+    sport: 'cycling',
+    distance_m: 45000,
+    duration_s: 5400,
+    elevation_gain_m: 520,
+    location: 'Mt. Tamalpais Loop',
+    created_at: '5 hours ago',
+    likes: 18,
+    comments: 5
+  },
+  {
+    id: 'act_3',
+    user_id: 'user_emma_789',
+    user: { id: 'user_emma_789', name: 'Emma Davis', avatar_color: 'bg-purple-600' },
+    sport: 'running',
+    distance_m: 5200,
+    duration_s: 1860,
+    elevation_gain_m: 42,
+    location: 'Marina District',
+    created_at: 'Yesterday',
+    likes: 8,
+    comments: 2
+  },
+  {
+    id: 'act_4',
+    user_id: 'user_alex_321',
+    user: { id: 'user_alex_321', name: 'Alex Martinez', avatar_color: 'bg-orange-600' },
+    sport: 'running',
+    distance_m: 10500,
+    duration_s: 3120,
+    elevation_gain_m: 115,
+    location: 'Presidio Trails',
+    created_at: 'Yesterday',
+    likes: 15,
+    comments: 4
+  },
+  {
+    id: 'act_5',
+    user_id: 'user_john_654',
+    user: { id: 'user_john_654', name: 'John Smith', avatar_color: 'bg-red-600' },
+    sport: 'cycling',
+    distance_m: 32000,
+    duration_s: 4200,
+    elevation_gain_m: 280,
+    location: 'Bay Trail',
+    created_at: '2 days ago',
+    likes: 10,
+    comments: 1
+  }
+];
 
 function Following() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [activities, setActivities] = useState([]);
-  const [following, setFollowing] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [activities, setActivities] = useState(DUMMY_ACTIVITIES);
+  const [following, setFollowing] = useState(DUMMY_FOLLOWING);
 
   useEffect(() => {
-    loadFollowingAndActivities();
+    // Load dummy data immediately
+    setFollowing(DUMMY_FOLLOWING);
+    setActivities(DUMMY_ACTIVITIES);
   }, []);
-
-  const loadFollowingAndActivities = async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Get following list from API
-      const followingResponse = await socialAPI.getFollowing(user.id);
-      const followingList = followingResponse.data || [];
-      setFollowing(followingList);
-
-      // Get activities from followed users
-      // In production, this would be a dedicated endpoint for activity feed
-      const activitiesResponse = await activitiesAPI.list(0, 50);
-      const allActivities = activitiesResponse.data || [];
-      
-      // Filter to only show activities from followed users
-      const followedIds = new Set(followingList.map(f => f.id));
-      const filteredActivities = allActivities.filter(a => followedIds.has(a.user_id));
-      
-      setActivities(filteredActivities);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading following:', error);
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
@@ -171,7 +222,17 @@ function Following() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center space-x-4 pt-4 border-t border-slate-200">
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+                    <div className="flex items-center space-x-4">
+                      <button className="flex items-center space-x-1 text-slate-600 hover:text-red-600 transition text-sm">
+                        <Heart className="h-4 w-4" />
+                        <span>{activity.likes}</span>
+                      </button>
+                      <button className="flex items-center space-x-1 text-slate-600 hover:text-blue-600 transition text-sm">
+                        <MessageSquare className="h-4 w-4" />
+                        <span>{activity.comments}</span>
+                      </button>
+                    </div>
                     <button className="flex items-center space-x-1 text-slate-600 hover:text-slate-900 transition text-sm">
                       <TrendingUp className="h-4 w-4" />
                       <span>View Details</span>

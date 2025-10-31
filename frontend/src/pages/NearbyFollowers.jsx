@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { locationAPI } from '../services/api';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
-import { ArrowLeft, MapPin, Users, Bell, ToggleLeft, ToggleRight, Navigation, AlertCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, Bell, ToggleLeft, ToggleRight, Navigation, AlertCircle, Activity } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 

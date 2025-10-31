@@ -170,28 +170,24 @@ function Notifications() {
                   }`}
                 >
                   <div className="flex items-start space-x-3">
-                    {/* Avatar */}
-                    <div className={`flex-shrink-0 h-12 w-12 rounded-full ${notification.user.avatar_color} flex items-center justify-center`}>
-                      <span className="text-white font-semibold text-sm">
-                        {notification.user.name.split(' ').map(n => n[0]).join('')}
-                      </span>
+                    {/* Icon */}
+                    <div className="flex-shrink-0">
+                      {getNotificationIcon(notification.type)}
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="text-sm text-slate-900">
-                            <span className="font-semibold">{notification.user.name}</span>
-                            {' '}
-                            <span className="text-slate-700">{notification.message}</span>
+                          <p className="text-sm font-semibold text-slate-900 mb-1">
+                            {notification.title}
                           </p>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {notification.timestamp}
+                          <p className="text-sm text-slate-600 mb-1">
+                            {notification.message}
                           </p>
-                        </div>
-                        <div className="ml-3 flex-shrink-0">
-                          {getNotificationIcon(notification.type)}
+                          <p className="text-xs text-slate-500">
+                            {new Date(notification.timestamp).toLocaleString()}
+                          </p>
                         </div>
                       </div>
                     </div>
