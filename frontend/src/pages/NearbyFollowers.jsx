@@ -15,21 +15,74 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Dummy data for nearby friends
+const DUMMY_NEARBY_USERS = [
+  {
+    user_id: 'user_sarah_123',
+    name: 'Sarah Johnson',
+    profile_image_url: null,
+    latitude: 37.7751,
+    longitude: -122.4195,
+    distance_meters: 250,
+    last_updated: new Date(Date.now() - 2 * 60 * 1000).toISOString(), // 2 min ago
+    activity: 'Running - 3.2km'
+  },
+  {
+    user_id: 'user_mike_456',
+    name: 'Mike Chen',
+    profile_image_url: null,
+    latitude: 37.7755,
+    longitude: -122.4185,
+    distance_meters: 680,
+    last_updated: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 min ago
+    activity: 'Cycling - 12.5km'
+  },
+  {
+    user_id: 'user_emma_789',
+    name: 'Emma Davis',
+    profile_image_url: null,
+    latitude: 37.7742,
+    longitude: -122.4205,
+    distance_meters: 1200,
+    last_updated: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 min ago
+    activity: 'Walking'
+  },
+  {
+    user_id: 'user_alex_321',
+    name: 'Alex Martinez',
+    profile_image_url: null,
+    latitude: 37.7760,
+    longitude: -122.4170,
+    distance_meters: 320,
+    last_updated: new Date(Date.now() - 1 * 60 * 1000).toISOString(), // 1 min ago
+    activity: 'Running - 5.1km'
+  }
+];
+
+const DUMMY_PROXIMITY_ALERTS = [
+  {
+    id: 'alert_1',
+    user_name: 'Sarah Johnson',
+    distance_meters: 250,
+    timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString()
+  }
+];
+
 function NearbyFollowers() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [locationEnabled, setLocationEnabled] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [nearbyUsers, setNearbyUsers] = useState([]);
-  const [proximityAlerts, setProximityAlerts] = useState([]);
+  const [currentLocation, setCurrentLocation] = useState({ latitude: 37.7749, longitude: -122.4194 });
+  const [nearbyUsers, setNearbyUsers] = useState(DUMMY_NEARBY_USERS);
+  const [proximityAlerts, setProximityAlerts] = useState(DUMMY_PROXIMITY_ALERTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const watchIdRef = useRef(null);
   const updateIntervalRef = useRef(null);
 
   useEffect(() => {
+    // Don't redirect, just wait for user to load from AuthContext
     if (!user) {
-      navigate('/login');
       return;
     }
 
@@ -181,9 +234,11 @@ function NearbyFollowers() {
         }
         
         startLocationTracking();
+        setLocationEnabled(true);
       } else {
         stopLocationTracking();
         setLocationEnabled(false);
+        // Don't clear the data, just stop tracking
       }
 
       // Save to localStorage for persistence
@@ -242,23 +297,6 @@ function NearbyFollowers() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center space-x-3">
             <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
             <p className="text-red-800">{error}</p>
-          </div>
-        )}
-
-        {/* Proximity Alerts */}
-        {proximityAlerts.length > 0 && (
-          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-lg p-4 mb-6">
-            <div className="flex items-center space-x-2 mb-3">
-              <Bell className="h-5 w-5 text-orange-600 animate-bounce" />
-              <h3 className="font-bold text-orange-900">Friends Nearby!</h3>
-            </div>
-            <div className="space-y-2">
-              {proximityAlerts.map((alert) => (
-                <div key={alert.user_id} className="bg-white rounded-lg p-3 border border-orange-200">
-                  <p className="text-sm text-orange-900 font-medium">{alert.message}</p>
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
@@ -344,30 +382,89 @@ function NearbyFollowers() {
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                  {nearbyUsers.map((nearbyUser) => (
-                    <button
-                      key={nearbyUser.user_id}
-                      onClick={() => navigate(`/profile/${nearbyUser.user_id}`)}
-                      className="w-full p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition text-left"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center flex-shrink-0">
-                          <span className="text-white font-semibold text-sm">
-                            {nearbyUser.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-slate-900 truncate">
-                            {nearbyUser.name}
+                  {nearbyUsers.map((nearbyUser) => {
+                    const distanceText = nearbyUser.distance_meters < 1000 
+                      ? `${nearbyUser.distance_meters}m` 
+                      : `${(nearbyUser.distance_meters / 1000).toFixed(1)}km`;
+                    
+                    const isVeryClose = nearbyUser.distance_meters < 500;
+                    
+                    // Calculate time ago
+                    const lastUpdatedDate = new Date(nearbyUser.last_updated);
+                    const minutesAgo = Math.floor((Date.now() - lastUpdatedDate.getTime()) / 60000);
+                    const timeAgoText = minutesAgo < 1 ? 'Just now' :
+                                       minutesAgo === 1 ? '1 min ago' :
+                                       minutesAgo < 60 ? `${minutesAgo} mins ago` :
+                                       `${Math.floor(minutesAgo / 60)}h ago`;
+                    
+                    return (
+                      <div
+                        key={nearbyUser.user_id}
+                        className={`p-4 border-2 rounded-lg ${
+                          isVeryClose 
+                            ? 'border-orange-300 bg-orange-50' 
+                            : 'border-slate-200 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-start space-x-3 mb-3">
+                          <div className={`h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            isVeryClose ? 'bg-orange-600' : 'bg-blue-600'
+                          }`}>
+                            <span className="text-white font-semibold">
+                              {nearbyUser.name.split(' ').map(n => n[0]).join('')}
+                            </span>
                           </div>
-                          <div className="text-sm text-slate-600">
-                            {nearbyUser.distance_km}km away
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h3 className="font-semibold text-slate-900 truncate">
+                                {nearbyUser.name}
+                              </h3>
+                              {isVeryClose && (
+                                <span className="px-2 py-0.5 bg-orange-600 text-white text-xs font-bold rounded">
+                                  NEARBY
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Distance */}
+                            <div className="flex items-center space-x-1 text-sm text-slate-600 mb-1">
+                              <MapPin className="h-3.5 w-3.5" />
+                              <span className="font-medium">{distanceText} away</span>
+                            </div>
+                            
+                            {/* Activity */}
+                            {nearbyUser.activity && (
+                              <div className="flex items-center space-x-1 text-xs text-green-700 bg-green-50 rounded px-2 py-0.5 mb-1 inline-flex">
+                                <Activity className="h-3 w-3" />
+                                <span>{nearbyUser.activity}</span>
+                              </div>
+                            )}
+                            
+                            {/* Last updated */}
+                            <div className="text-xs text-slate-500 mt-1">
+                              Updated {timeAgoText}
+                            </div>
                           </div>
                         </div>
-                        <Navigation className="h-4 w-4 text-slate-400" />
+                        
+                        {/* Action buttons */}
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => navigate(`/profile/${nearbyUser.user_id}`)}
+                            className="flex-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded transition"
+                          >
+                            View Profile
+                          </button>
+                          <button
+                            onClick={() => navigate('/messages')}
+                            className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition"
+                          >
+                            Message
+                          </button>
+                        </div>
                       </div>
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

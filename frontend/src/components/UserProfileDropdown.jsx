@@ -37,6 +37,8 @@ function UserProfileDropdown() {
   };
 
   const getRandomColor = (userId) => {
+    if (!userId) return 'bg-gray-600'; // Default color if userId is undefined
+    
     const colors = [
       'bg-blue-600',
       'bg-purple-600',

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usersAPI } from '../services/api';
@@ -21,6 +21,19 @@ function Settings() {
     bio: user?.bio || '',
     location: user?.location || ''
   });
+
+  // Update form data when user changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        bio: user.bio || '',
+        location: user.location || ''
+      });
+      setProfileImage(user.profile_image_url || null);
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     setFormData({

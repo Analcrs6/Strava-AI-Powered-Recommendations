@@ -46,143 +46,81 @@ function RecordActivity() {
   // Default map center (will be updated with user's location)
   const [mapCenter, setMapCenter] = useState([37.7749, -122.4194]);
 
-  // Initialize GPS tracking on mount - aggressive high-accuracy mode
+  // Initialize GPS tracking on mount - simplified and more lenient
   useEffect(() => {
-    const initLocation = () => {
-      if (!('geolocation' in navigator)) {
-        setGpsError('GPS not supported by your browser');
-        return;
+    if (!('geolocation' in navigator)) {
+      setGpsError('GPS not supported by your browser');
+      return;
+    }
+
+    console.log('📍 Getting your location...');
+    
+    // Get initial position
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const location = [position.coords.latitude, position.coords.longitude];
+        const accuracy = position.coords.accuracy;
+        
+        setCurrentLocation(location);
+        setMapCenter(location);
+        setGpsAccuracy(accuracy);
+        setGpsError(null);
+        
+        // Set location source and quality
+        setLocationSource(accuracy < 50 ? 'gps' : accuracy < 200 ? 'network' : 'cell');
+        const quality = Math.max(20, Math.min(100, 100 - accuracy));
+        setGpsQuality(quality);
+        
+        console.log(`✅ GPS ready: ${accuracy.toFixed(0)}m accuracy`);
+      },
+      (error) => {
+        console.error('GPS error:', error);
+        if (error.code === error.PERMISSION_DENIED) {
+          setGpsError('Please enable location access');
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          setGpsError('GPS unavailable - using last known location');
+        } else {
+          setGpsError('Getting location...');
+        }
+      },
+      { 
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 5000
       }
+    );
 
-      console.log('🛰️ Requesting high-precision GPS position...');
-      let retryCount = 0;
-      const maxRetries = 5;
-      const MIN_ACCEPTABLE_ACCURACY = 100; // meters
+    // Watch position continuously - accept all readings
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const location = [position.coords.latitude, position.coords.longitude];
+        const accuracy = position.coords.accuracy;
+        
+        setCurrentLocation(location);
+        setGpsAccuracy(accuracy);
+        setGpsError(null);
+        
+        // Update quality indicator
+        setLocationSource(accuracy < 50 ? 'gps' : accuracy < 200 ? 'network' : 'cell');
+        const quality = Math.max(20, Math.min(100, 100 - accuracy));
+        setGpsQuality(quality);
+      },
+      (error) => {
+        console.error('Watch position error:', error);
+      },
+      { 
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 5000
+      }
+    );
 
-      const attemptGetPosition = () => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const accuracy = position.coords.accuracy;
-            console.log(`📍 GPS attempt ${retryCount + 1}: accuracy ${accuracy.toFixed(1)}m`);
-            
-            // Reject extremely poor accuracy readings (> 100m)
-            if (accuracy > MIN_ACCEPTABLE_ACCURACY) {
-              console.warn(`⚠️ Accuracy ${accuracy.toFixed(1)}m is too poor, retrying...`);
-              retryCount++;
-              if (retryCount < maxRetries) {
-                setGpsError(`GPS accuracy poor (${Math.round(accuracy)}m). Retrying... (${retryCount}/${maxRetries})`);
-                setTimeout(attemptGetPosition, 1000);
-                return;
-              } else {
-                // After max retries, accept it but warn user
-                setGpsError(`⚠️ Best GPS accuracy: ${Math.round(accuracy)}m. Move to open area for better signal.`);
-              }
-            }
-            
-            const location = [position.coords.latitude, position.coords.longitude];
-            setCurrentLocation(location);
-            setMapCenter(location);
-            setGpsAccuracy(accuracy);
-            setLocationSource(accuracy < 50 ? 'gps' : accuracy < 200 ? 'network' : 'cell');
-            
-            if (accuracy <= MIN_ACCEPTABLE_ACCURACY) {
-              setGpsError(null);
-            }
-            
-            // Calculate GPS quality based on accuracy
-            const quality = accuracy < 10 ? 100 :
-                           accuracy < 20 ? 90 :
-                           accuracy < 30 ? 75 :
-                           accuracy < 50 ? 60 :
-                           accuracy < 100 ? 40 : 20;
-            setGpsQuality(quality);
-            
-            console.log(`✅ GPS locked: ${accuracy.toFixed(1)}m accuracy (${quality}% quality)`);
-          },
-          (error) => {
-            console.error('❌ GPS error:', error);
-            let errorMessage = 'Unable to access GPS';
-            if (error.code === error.PERMISSION_DENIED) {
-              errorMessage = 'Location permission denied. Please enable location access in browser settings.';
-            } else if (error.code === error.POSITION_UNAVAILABLE) {
-              errorMessage = 'GPS signal unavailable. Move to an open area with clear sky view.';
-            } else if (error.code === error.TIMEOUT) {
-              errorMessage = 'GPS timeout. Trying again...';
-              retryCount++;
-              if (retryCount < maxRetries) {
-                setTimeout(attemptGetPosition, 1000);
-                return;
-              }
-            }
-            setGpsError(errorMessage);
-          },
-          { 
-            enableHighAccuracy: true,
-            timeout: 20000, // 20 seconds timeout
-            maximumAge: 0 // Force fresh reading
-          }
-        );
-      };
-
-      // Start first attempt
-      attemptGetPosition();
-
-      // Watch position continuously with strict accuracy filtering
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const accuracy = position.coords.accuracy;
-          
-          // Only update if accuracy is acceptable
-          if (accuracy <= MIN_ACCEPTABLE_ACCURACY) {
-            const location = [position.coords.latitude, position.coords.longitude];
-            setCurrentLocation(location);
-            setGpsAccuracy(accuracy);
-            setLocationSource(accuracy < 50 ? 'gps' : 'network');
-            setGpsError(null);
-            
-            // Update GPS quality
-            const quality = accuracy < 10 ? 100 :
-                           accuracy < 20 ? 90 :
-                           accuracy < 30 ? 75 :
-                           accuracy < 50 ? 60 : 40;
-            setGpsQuality(quality);
-            
-            console.log(`📍 Position update: ${accuracy.toFixed(1)}m`);
-          } else {
-            console.warn(`⚠️ Ignoring poor accuracy reading: ${accuracy.toFixed(1)}m`);
-            setGpsError(`GPS accuracy poor: ${Math.round(accuracy)}m. Move to open area.`);
-            
-            // Still update but show warning
-            const location = [position.coords.latitude, position.coords.longitude];
-            setCurrentLocation(location);
-            setGpsAccuracy(accuracy);
-            setLocationSource('cell');
-            setGpsQuality(20);
-          }
-        },
-        (error) => {
-          console.error('Position watch error:', error);
-          if (error.code === error.POSITION_UNAVAILABLE) {
-            setGpsError('GPS signal lost. Move to an area with better visibility of the sky.');
-          }
-        },
-        { 
-          enableHighAccuracy: true,
-          timeout: 20000,
-          maximumAge: 2000 // Cache for max 2 seconds
-        }
-      );
-
-      // Cleanup
-      return () => {
-        if (watchId) {
-          navigator.geolocation.clearWatch(watchId);
-        }
-      };
+    // Cleanup
+    return () => {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+      }
     };
-
-    const cleanup = initLocation();
-    return cleanup;
   }, []);
 
   // Timer effect
@@ -217,27 +155,24 @@ function RecordActivity() {
         const newPoint = [position.coords.latitude, position.coords.longitude];
         const accuracy = position.coords.accuracy;
         
-        console.log('Recording point - accuracy:', accuracy);
+        console.log('Recording point - accuracy:', accuracy.toFixed(0) + 'm');
         
-        // Only add point to route if accuracy is reasonable (< 100m)
-        if (accuracy < 100) {
-          setRoute(prevRoute => {
-            const newRoute = [...prevRoute, newPoint];
-            
-            // Calculate distance if we have a previous point
-            if (prevRoute.length > 0) {
-              const lastPoint = prevRoute[prevRoute.length - 1];
-              const dist = calculateDistance(lastPoint, newPoint);
-              // Only add distance if movement is reasonable (< 100m between points)
-              // This prevents spikes from GPS drift
-              if (dist < 100 && dist > 2) { // Ignore very small movements (< 2m GPS noise)
-                setDistance(prev => prev + dist);
-              }
+        // Accept all readings but filter out extreme spikes
+        setRoute(prevRoute => {
+          const newRoute = [...prevRoute, newPoint];
+          
+          // Calculate distance if we have a previous point
+          if (prevRoute.length > 0) {
+            const lastPoint = prevRoute[prevRoute.length - 1];
+            const dist = calculateDistance(lastPoint, newPoint);
+            // Ignore very large spikes (GPS errors) and very small movements (GPS noise)
+            if (dist < 200 && dist > 1) {
+              setDistance(prev => prev + dist);
             }
-            
-            return newRoute;
-          });
-        }
+          }
+          
+          return newRoute;
+        });
         
         // Update elevation if available
         if (position.coords.altitude !== null && position.coords.altitude !== undefined) {

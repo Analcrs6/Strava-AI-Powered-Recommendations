@@ -101,20 +101,21 @@ function Login() {
         throw new Error(errorData.detail || 'Invalid email or password');
       }
 
-      const userData = await response.json();
+      const responseData = await response.json();
       
+      // Backend returns { access_token, refresh_token, user }
       const user = {
-        id: userData.id,
-        name: userData.name,
-        email: userData.email,
-        bio: userData.bio,
-        location: userData.location,
-        profile_image_url: userData.profile_image_url,
+        id: responseData.user.id,
+        name: responseData.user.name,
+        email: responseData.user.email,
+        bio: responseData.user.bio,
+        location: responseData.user.location,
+        profile_image_url: responseData.user.profile_image_url,
         provider: 'email'
       };
       
       login(user);
-      console.log('✅ User logged in:', userData.id, '(' + userData.name + ')');
+      console.log('✅ User logged in:', user.id, '(' + user.name + ')');
       navigate('/');
     } catch (err) {
       console.error('Email login error:', err);

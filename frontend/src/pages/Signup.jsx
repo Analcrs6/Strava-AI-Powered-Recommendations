@@ -118,21 +118,30 @@ function Signup() {
         throw new Error(errorData.detail || 'Failed to create account');
       }
 
-      const userData = await response.json();
+      const responseData = await response.json();
       
-      const user = {
-        id: userData.id,
-        name: userData.name,
-        email: userData.email,
-        bio: userData.bio,
-        location: userData.location,
-        profile_image_url: userData.profile_image_url,
-        provider: 'email'
-      };
-      
-      login(user);
-      console.log('✅ User created:', userData.id, '(' + userData.name + ')');
-      navigate('/');
+      // Backend returns { access_token, refresh_token, user }
+      // Check if email verification is required
+      if (responseData.verification_required) {
+        // Show success message about verification email
+        alert('Account created! Please check your email to verify your account before logging in.');
+        navigate('/login');
+      } else {
+        // Log in directly if no verification required
+        const user = {
+          id: responseData.user.id,
+          name: responseData.user.name,
+          email: responseData.user.email,
+          bio: responseData.user.bio,
+          location: responseData.user.location,
+          profile_image_url: responseData.user.profile_image_url,
+          provider: 'email'
+        };
+        
+        login(user);
+        console.log('✅ User created and logged in:', user.id, '(' + user.name + ')');
+        navigate('/');
+      }
     } catch (err) {
       console.error('Signup error:', err);
       setError(err.message || 'Failed to create account');

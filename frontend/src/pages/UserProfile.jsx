@@ -175,7 +175,7 @@ function UserProfile() {
             <div>
               {isOwnProfile ? (
                 <button
-                  onClick={() => navigate(`/profile/${userId}/edit`)}
+                  onClick={() => navigate('/settings')}
                   className="flex items-center space-x-2 px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg hover:bg-white/30 transition"
                 >
                   <Edit2 className="h-4 w-4" />
