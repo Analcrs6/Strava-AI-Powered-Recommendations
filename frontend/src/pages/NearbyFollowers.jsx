@@ -270,7 +270,7 @@ function NearbyFollowers() {
                 {currentLocation ? (
                   <MapContainer
                     center={[currentLocation.latitude, currentLocation.longitude]}
-                    zoom={13}
+                    zoom={16}
                     style={{ height: '100%', width: '100%' }}
                   >
                     <TileLayer
