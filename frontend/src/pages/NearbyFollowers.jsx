@@ -141,7 +141,7 @@ function NearbyFollowers() {
     if (!user || !currentLocation) return;
 
     try {
-      const response = await locationAPI.checkProximityNotifications(user.id, 5);
+      const response = await locationAPI.checkProximityNotifications(user.id, 500);
       const alerts = response.data || [];
       
       // Show new alerts
@@ -285,10 +285,10 @@ function NearbyFollowers() {
                       </Popup>
                     </Marker>
                     
-                    {/* Proximity circle (5km) */}
+                    {/* Proximity circle (500m) */}
                     <Circle
                       center={[currentLocation.latitude, currentLocation.longitude]}
-                      radius={5000}
+                      radius={500}
                       pathOptions={{ color: 'orange', fillColor: 'orange', fillOpacity: 0.1 }}
                     />
 
@@ -378,7 +378,7 @@ function NearbyFollowers() {
               <ul className="text-xs text-blue-800 space-y-1.5 leading-relaxed">
                 <li>• Enable location sharing to see mutual followers</li>
                 <li>• Only friends who follow you back can see your location</li>
-                <li>• Get notified when friends are within 5km</li>
+                <li>• Get notified when friends are within 500 meters</li>
                 <li>• Location updates every 30 seconds</li>
               </ul>
             </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet';
 import { Play, Pause, Square, Save, MapPin, Activity, Clock, Navigation, AlertCircle } from 'lucide-react';
 import { activitiesAPI } from '../services/api';
+import { getPrecisionLocationService } from '../services/PrecisionLocationService';
 import 'leaflet/dist/leaflet.css';
 
 /**
@@ -36,33 +37,77 @@ function RecordActivity() {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [gpsError, setGpsError] = useState(null);
   const [gpsAccuracy, setGpsAccuracy] = useState(null);
+  const [gpsQuality, setGpsQuality] = useState(null);
+  const [locationSource, setLocationSource] = useState(null);
   
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
-  const watchIdRef = useRef(null);
+  const locationServiceRef = useRef(null);
 
   // Default map center (will be updated with user's location)
   const [mapCenter, setMapCenter] = useState([37.7749, -122.4194]);
 
-  // Get user's initial location on mount
+  // Initialize precision location service on mount
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = [position.coords.latitude, position.coords.longitude];
+    const initLocationService = async () => {
+      try {
+        locationServiceRef.current = getPrecisionLocationService();
+        
+        if (!locationServiceRef.current.isGeolocationAvailable()) {
+          setGpsError('GPS not supported by your browser');
+          return;
+        }
+
+        // Start tracking with high accuracy settings
+        const initialPosition = await locationServiceRef.current.startTracking({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+          minAccuracy: 30, // Accept positions within 30m accuracy
+          maxAccuracy: 1000,
+          updateThrottle: 500 // Update every 500ms for better tracking
+        });
+
+        if (initialPosition) {
+          const location = [initialPosition.latitude, initialPosition.longitude];
           setCurrentLocation(location);
           setMapCenter(location);
-          setGpsAccuracy(position.coords.accuracy);
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          setGpsError('Unable to access GPS. Please enable location services.');
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    } else {
-      setGpsError('GPS not supported by your browser');
-    }
+          setGpsAccuracy(initialPosition.accuracy);
+          setLocationSource(initialPosition.source);
+          setGpsQuality(locationServiceRef.current.getGPSQuality());
+        }
+
+        // Subscribe to position updates
+        const unsubscribe = locationServiceRef.current.subscribe((position) => {
+          const location = [position.latitude, position.longitude];
+          setCurrentLocation(location);
+          setGpsAccuracy(position.accuracy);
+          setLocationSource(position.source);
+          setGpsQuality(locationServiceRef.current.getGPSQuality());
+          setGpsError(null);
+        });
+
+        // Subscribe to errors
+        const unsubscribeErrors = locationServiceRef.current.subscribeToErrors((error) => {
+          console.error('Location service error:', error);
+          setGpsError(error.message);
+        });
+
+        // Cleanup on unmount
+        return () => {
+          unsubscribe();
+          unsubscribeErrors();
+          if (locationServiceRef.current) {
+            locationServiceRef.current.stopTracking();
+          }
+        };
+      } catch (error) {
+        console.error('Failed to initialize location service:', error);
+        setGpsError(error.message || 'Unable to access GPS. Please enable location services.');
+      }
+    };
+
+    initLocationService();
   }, []);
 
   // Timer effect
@@ -85,77 +130,52 @@ function RecordActivity() {
     };
   }, [isRecording, isPaused]);
 
-  // GPS tracking effect
+  // GPS tracking effect for recording - adds points to route
   useEffect(() => {
-    if (isRecording && !isPaused) {
-      // Start watching position
-      if ('geolocation' in navigator) {
-        watchIdRef.current = navigator.geolocation.watchPosition(
-          (position) => {
-            const newPoint = [position.coords.latitude, position.coords.longitude];
-            const accuracy = position.coords.accuracy;
-            
-            setCurrentLocation(newPoint);
-            setGpsAccuracy(accuracy);
-            setGpsError(null); // Clear any previous error
-            
-            // Only add point to route if accuracy is reasonable (< 100m)
-            // This prevents adding points when GPS signal is poor
-            if (accuracy < 100) {
-              setRoute(prevRoute => {
-                const newRoute = [...prevRoute, newPoint];
-                
-                // Calculate distance if we have a previous point
-                if (prevRoute.length > 0) {
-                  const lastPoint = prevRoute[prevRoute.length - 1];
-                  const dist = calculateDistance(lastPoint, newPoint);
-                  // Only add distance if movement is reasonable (< 100m between points)
-                  // This prevents spikes from GPS drift
-                  if (dist < 100) {
-                    setDistance(prev => prev + dist);
-                  }
-                }
-                
-                return newRoute;
-              });
-            }
-            
-            // Update elevation if available
-            if (position.coords.altitude !== null && position.coords.altitude !== undefined) {
-              setElevation(Math.max(0, position.coords.altitude));
-            }
-          },
-          (error) => {
-            console.error('GPS tracking error:', error);
-            if (error.code === error.PERMISSION_DENIED) {
-              setGpsError('Location access denied. Please enable location permissions.');
-            } else if (error.code === error.POSITION_UNAVAILABLE) {
-              setGpsError('GPS signal unavailable. Move to an open area.');
-            } else if (error.code === error.TIMEOUT) {
-              setGpsError('GPS timeout. Trying again...');
-            } else {
-              setGpsError('GPS error. Please check your location settings.');
-            }
-          },
-          { 
-            enableHighAccuracy: true, 
-            timeout: 10000, 
-            maximumAge: 0
-          }
-        );
-      }
-    } else {
-      // Stop watching position
-      if (watchIdRef.current) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
+    if (!isRecording || isPaused || !locationServiceRef.current) {
+      return;
     }
 
-    return () => {
-      if (watchIdRef.current) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
+    // Subscribe to location updates during recording
+    const unsubscribe = locationServiceRef.current.subscribe((position) => {
+      const newPoint = [position.latitude, position.longitude];
+      const accuracy = position.accuracy;
+      
+      // Only add point to route if accuracy is reasonable (< 50m for better accuracy)
+      // PrecisionLocationService already filters bad positions, but we add extra check
+      if (accuracy < 50) {
+        setRoute(prevRoute => {
+          // Skip if we have validation warnings (erratic movement)
+          if (position.validationWarning) {
+            console.warn('Skipping point due to validation warning:', position.validationWarning);
+            return prevRoute;
+          }
+
+          const newRoute = [...prevRoute, newPoint];
+          
+          // Calculate distance if we have a previous point
+          if (prevRoute.length > 0) {
+            const lastPoint = prevRoute[prevRoute.length - 1];
+            const dist = calculateDistance(lastPoint, newPoint);
+            // Only add distance if movement is reasonable (< 50m between points)
+            // PrecisionLocationService already validates movement, but we check distance
+            if (dist < 50 && dist > 1) { // Ignore very small movements (< 1m GPS noise)
+              setDistance(prev => prev + dist);
+            }
+          }
+          
+          return newRoute;
+        });
       }
+      
+      // Update elevation if available
+      if (position.altitude !== null && position.altitude !== undefined) {
+        setElevation(Math.max(0, position.altitude));
+      }
+    });
+
+    return () => {
+      unsubscribe();
     };
   }, [isRecording, isPaused]);
 
@@ -318,13 +338,47 @@ function RecordActivity() {
               )}
               
               {gpsAccuracy !== null && (
-                <div className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                  gpsAccuracy < 15 ? 'bg-green-600 text-white' :
-                  gpsAccuracy < 30 ? 'bg-yellow-600 text-white' :
-                  gpsAccuracy < 100 ? 'bg-orange-600 text-white' :
-                  'bg-red-600 text-white'
-                }`}>
-                  GPS Accuracy: {gpsAccuracy < 100 ? `±${Math.round(gpsAccuracy)}m` : 'Poor (Searching...)'}
+                <div>
+                  <div className={`px-3 py-2 rounded-lg text-xs font-semibold ${
+                    gpsAccuracy < 10 ? 'bg-green-600 text-white' :
+                    gpsAccuracy < 20 ? 'bg-green-500 text-white' :
+                    gpsAccuracy < 30 ? 'bg-yellow-600 text-white' :
+                    gpsAccuracy < 50 ? 'bg-orange-600 text-white' :
+                    'bg-red-600 text-white'
+                  }`}>
+                    GPS Accuracy: ±{Math.round(gpsAccuracy)}m
+                    {locationSource && (
+                      <span className="ml-2 text-xs opacity-90">
+                        ({locationSource.toUpperCase()})
+                      </span>
+                    )}
+                  </div>
+                  {gpsQuality !== null && (
+                    <div className="mt-1 px-3 py-1 bg-gray-700 rounded text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-300">Signal Quality:</span>
+                        <span className={`font-semibold ${
+                          gpsQuality >= 80 ? 'text-green-400' :
+                          gpsQuality >= 60 ? 'text-yellow-400' :
+                          gpsQuality >= 40 ? 'text-orange-400' :
+                          'text-red-400'
+                        }`}>
+                          {Math.round(gpsQuality)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-600 rounded-full h-1.5 mt-1">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${
+                            gpsQuality >= 80 ? 'bg-green-500' :
+                            gpsQuality >= 60 ? 'bg-yellow-500' :
+                            gpsQuality >= 40 ? 'bg-orange-500' :
+                            'bg-red-500'
+                          }`}
+                          style={{ width: `${gpsQuality}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               
@@ -455,7 +509,16 @@ function RecordActivity() {
             {!isRecording && currentLocation && !gpsError && (
               <div className="bg-gray-700 rounded-lg p-3 text-xs text-gray-300">
                 <MapPin className="h-4 w-4 text-green-500 inline mr-1" />
-                GPS ready. Press play to start tracking automatically.
+                High-precision GPS ready. Tracking with Kalman filtering for improved accuracy.
+              </div>
+            )}
+            
+            {!isRecording && gpsAccuracy && gpsAccuracy < 20 && (
+              <div className="bg-green-900 bg-opacity-30 border border-green-600 rounded-lg p-3 text-xs text-green-300">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="font-semibold">Excellent GPS signal detected!</span>
+                </div>
               </div>
             )}
           </div>
