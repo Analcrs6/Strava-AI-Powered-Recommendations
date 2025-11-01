@@ -95,7 +95,20 @@ The UI follows Strava's design language with:
 
 ## Environment Variables
 
-No environment variables needed - API URL is configured in `vite.config.js`
+### Mapbox GL API Key (Required for Enhanced Maps)
+
+For the Record Activity page with professional GPS tracking, you'll need a Mapbox API key:
+
+1. **Get a free Mapbox token**: https://account.mapbox.com/access-tokens/
+2. **Create `.env` file** in the `frontend/` directory:
+   ```bash
+   VITE_MAPBOX_TOKEN=pk.eyJ1IjoieW91cnVzZXJuYW1lIiwiYSI6ImN...your-token-here
+   ```
+3. **Restart the dev server** after adding the token
+
+📖 **Full setup guide**: See [MAPBOX_SETUP.md](./MAPBOX_SETUP.md)
+
+**Note**: The app will work without a token (uses basic OpenStreetMap fallback), but you'll get better map features with Mapbox!
 
 ## Browser Support
 

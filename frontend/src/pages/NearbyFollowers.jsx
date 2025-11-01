@@ -2,18 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { locationAPI } from '../services/api';
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
+import MapProviderFallback from '../components/MapProviderFallback';
 import { ArrowLeft, MapPin, Users, Bell, ToggleLeft, ToggleRight, Navigation, AlertCircle, Activity } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-
-// Fix default marker icons
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
 
 // Dummy data for nearby friends
 const DUMMY_NEARBY_USERS = [
@@ -306,45 +296,37 @@ function NearbyFollowers() {
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
               <div className="h-[600px]">
                 {currentLocation ? (
-                  <MapContainer
+                  <MapProviderFallback
                     center={[currentLocation.latitude, currentLocation.longitude]}
                     zoom={16}
-                    style={{ height: '100%', width: '100%' }}
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    
-                    {/* Current user location */}
-                    <Marker position={[currentLocation.latitude, currentLocation.longitude]}>
-                      <Popup>
-                        <strong>You are here</strong>
-                      </Popup>
-                    </Marker>
-                    
-                    {/* Proximity circle (500m) */}
-                    <Circle
-                      center={[currentLocation.latitude, currentLocation.longitude]}
-                      radius={500}
-                      pathOptions={{ color: 'orange', fillColor: 'orange', fillOpacity: 0.1 }}
-                    />
-
-                    {/* Nearby mutual followers */}
-                    {nearbyUsers.map((nearbyUser) => (
-                      <Marker
-                        key={nearbyUser.user_id}
-                        position={[nearbyUser.latitude, nearbyUser.longitude]}
-                      >
-                        <Popup>
-                          <div>
-                            <strong>{nearbyUser.name}</strong>
-                            <p className="text-sm">{nearbyUser.distance_km}km away</p>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    ))}
-                  </MapContainer>
+                    markers={[
+                      // Current user marker
+                      {
+                        id: 'current-user',
+                        latitude: currentLocation.latitude,
+                        longitude: currentLocation.longitude,
+                        label: 'You are here',
+                        color: '#3B82F6',
+                        type: 'user'
+                      },
+                      // Nearby users markers
+                      ...nearbyUsers.map((nearbyUser) => ({
+                        id: nearbyUser.user_id,
+                        latitude: nearbyUser.latitude,
+                        longitude: nearbyUser.longitude,
+                        label: `${nearbyUser.name} - ${nearbyUser.distance_meters < 1000 ? nearbyUser.distance_meters + 'm' : (nearbyUser.distance_meters / 1000).toFixed(1) + 'km'} away`,
+                        color: '#FC4C02',
+                        type: 'follower'
+                      }))
+                    ]}
+                    proximityCircle={{
+                      center: [currentLocation.latitude, currentLocation.longitude],
+                      radius: 500
+                    }}
+                    showControls={true}
+                    showStyleSelector={true}
+                    className="h-full w-full"
+                  />
                 ) : (
                   <div className="flex items-center justify-center h-full bg-slate-100">
                     <div className="text-center">

@@ -82,27 +82,37 @@ class PrecisionLocationService {
 
   /**
    * Start high-accuracy location tracking
+   * This will trigger the browser's native location permission prompt
    */
   async startTracking(options = {}) {
     if (!this.isGeolocationAvailable()) {
-      throw new Error('Geolocation is not supported by your browser');
+      const error = new Error('Geolocation is not supported by your browser');
+      error.code = 0;
+      throw error;
     }
 
     // Merge custom options
     this.config = { ...this.config, ...options };
 
-    // Request permission (if needed)
+    // Check permission status (if supported)
     try {
       const permissionStatus = await navigator.permissions?.query({ name: 'geolocation' });
       if (permissionStatus && permissionStatus.state === 'denied') {
-        throw new Error('Location permission denied');
+        const error = new Error('Location permission denied. Please enable location access in your browser settings.');
+        error.code = 1;
+        throw error;
       }
+      
+      console.log('📍 Permission status:', permissionStatus?.state || 'unknown');
     } catch (e) {
-      // Permission API not available, continue anyway
-      console.warn('Permissions API not available:', e.message);
+      // Permission API not available on all browsers, continue anyway
+      if (e.code === 1) throw e; // Re-throw if it's a denied permission
+      console.log('📍 Permissions API not available, will request on position fetch');
     }
 
-    // Get initial position with high accuracy
+    // Get initial position with high accuracy - this will trigger permission prompt
+    console.log('🎯 Requesting high-accuracy GPS position (this will prompt for permission)...');
+    
     try {
       const position = await this._getCurrentPositionAsync({
         enableHighAccuracy: true,
@@ -110,33 +120,57 @@ class PrecisionLocationService {
         maximumAge: 0
       });
       
+      console.log('✅ Initial position acquired:', {
+        accuracy: position.coords.accuracy,
+        latitude: position.coords.latitude.toFixed(6),
+        longitude: position.coords.longitude.toFixed(6)
+      });
+      
       this._handlePosition(position);
       this.locationSource = this._determineLocationSource(position);
       this.gpsAvailable = position.coords.accuracy < 100;
     } catch (error) {
-      console.warn('Initial high-accuracy position failed, trying standard accuracy:', error);
+      console.error('❌ Initial high-accuracy position failed:', error);
       
-      // Fallback to network positioning
-      try {
-        const position = await this._getCurrentPositionAsync({
-          enableHighAccuracy: false,
-          timeout: 5000,
-          maximumAge: 30000
-        });
+      // If permission denied, throw immediately
+      if (error.code === 1) {
+        const enhancedError = new Error('Location permission denied. Please enable location access in your browser settings.');
+        enhancedError.code = 1;
+        this._notifyError(enhancedError);
+        throw enhancedError;
+      }
+      
+      // For timeout or unavailable, try fallback to network positioning
+      if (error.code === 2 || error.code === 3) {
+        console.log('⚠️ Trying fallback to network positioning...');
         
-        this._handlePosition(position);
-        this.locationSource = 'network';
-        this.gpsAvailable = false;
-      } catch (fallbackError) {
-        this._notifyError(fallbackError);
-        throw fallbackError;
+        try {
+          const position = await this._getCurrentPositionAsync({
+            enableHighAccuracy: false,
+            timeout: 8000,
+            maximumAge: 10000
+          });
+          
+          console.log('✅ Fallback position acquired (network-based)');
+          this._handlePosition(position);
+          this.locationSource = 'network';
+          this.gpsAvailable = false;
+        } catch (fallbackError) {
+          console.error('❌ Fallback positioning also failed:', fallbackError);
+          this._notifyError(fallbackError);
+          throw fallbackError;
+        }
+      } else {
+        this._notifyError(error);
+        throw error;
       }
     }
 
-    // Start watching position
+    // Start watching position for continuous updates
     this._startWatching();
     this.isTracking = true;
 
+    console.log('🎉 Location tracking started successfully');
     return this.currentPosition;
   }
 
@@ -166,16 +200,30 @@ class PrecisionLocationService {
    * Start watching position changes
    */
   _startWatching() {
+    console.log('👀 Starting watchPosition with config:', {
+      enableHighAccuracy: this.config.enableHighAccuracy,
+      timeout: this.config.timeout,
+      maximumAge: this.config.maximumAge
+    });
+    
     // Try high accuracy first
     this.watchId = navigator.geolocation.watchPosition(
-      (position) => this._handlePosition(position),
-      (error) => this._handlePositionError(error),
+      (position) => {
+        console.log('📍 watchPosition callback triggered');
+        this._handlePosition(position);
+      },
+      (error) => {
+        console.error('❌ watchPosition error callback triggered');
+        this._handlePositionError(error);
+      },
       {
         enableHighAccuracy: this.config.enableHighAccuracy,
         maximumAge: this.config.maximumAge,
         timeout: this.config.timeout
       }
     );
+    
+    console.log('✅ watchPosition started with watchId:', this.watchId);
   }
 
   /**
@@ -185,9 +233,18 @@ class PrecisionLocationService {
     const { latitude, longitude, accuracy, altitude, heading, speed } = position.coords;
     const timestamp = new Date(position.timestamp);
 
+    console.log('🌍 Raw position received:', {
+      latitude: latitude.toFixed(6),
+      longitude: longitude.toFixed(6),
+      accuracy: accuracy.toFixed(1) + 'm',
+      altitude: altitude ? altitude.toFixed(1) + 'm' : 'N/A',
+      speed: speed ? speed.toFixed(1) + 'm/s' : 'N/A',
+      timestamp: new Date(position.timestamp).toISOString()
+    });
+
     // Validate accuracy
     if (accuracy > this.config.maxAccuracy) {
-      console.warn(`Position accuracy ${accuracy}m exceeds maximum ${this.config.maxAccuracy}m, skipping`);
+      console.warn(`⚠️ Position accuracy ${accuracy}m exceeds maximum ${this.config.maxAccuracy}m, skipping`);
       return;
     }
 
@@ -258,39 +315,69 @@ class PrecisionLocationService {
     this.locationSource = newPosition.source;
     this.gpsAvailable = accuracy < 100;
 
+    console.log('✅ Position processed and stored:', {
+      filtered: `${filteredLat.toFixed(6)}, ${filteredLon.toFixed(6)}`,
+      source: newPosition.source,
+      gpsQuality: this.getGPSQuality() + '%',
+      listeners: this.listeners.size
+    });
+
     // Notify listeners
+    console.log(`📢 Notifying ${this.listeners.size} listener(s)...`);
     this._notifyListeners(newPosition);
   }
 
   /**
-   * Handle position errors
+   * Handle position errors during continuous tracking
    */
   _handlePositionError(error) {
-    console.error('Geolocation error:', error.message);
+    console.error('📍 Geolocation error during tracking:', {
+      code: error.code,
+      message: error.message
+    });
 
     let errorMessage = 'Unknown location error';
+    let shouldRetry = false;
     
     switch (error.code) {
       case error.PERMISSION_DENIED:
-        errorMessage = 'Location permission denied. Please enable location access.';
+        errorMessage = 'Location permission denied. Please enable location access in your browser settings and refresh the page.';
+        // Stop tracking if permission is denied
+        this.stopTracking();
         break;
-      case error.POSITION_UNAVAILABLE:
-        errorMessage = 'Location information unavailable. Check your device settings.';
-        break;
-      case error.TIMEOUT:
-        errorMessage = 'Location request timed out. Trying again...';
         
-        // On timeout, try to continue with lower accuracy
-        if (this.config.enableHighAccuracy) {
-          console.log('Falling back to network positioning');
+      case error.POSITION_UNAVAILABLE:
+        errorMessage = 'Location signal lost. Move to an area with better GPS reception.';
+        shouldRetry = true;
+        break;
+        
+      case error.TIMEOUT:
+        errorMessage = 'Location request timed out. Checking GPS signal...';
+        shouldRetry = true;
+        
+        // On repeated timeouts, try to continue with lower accuracy
+        if (this.config.enableHighAccuracy && this.positionHistory.length === 0) {
+          console.log('⚠️ No GPS signal, falling back to network positioning');
           this.stopTracking();
           this.config.enableHighAccuracy = false;
           this._startWatching();
+          errorMessage = 'GPS unavailable, using network positioning';
         }
+        break;
+        
+      default:
+        errorMessage = error.message || 'An unknown location error occurred';
         break;
     }
 
-    this._notifyError({ code: error.code, message: errorMessage, originalError: error });
+    const enhancedError = { 
+      code: error.code, 
+      message: errorMessage, 
+      originalError: error,
+      shouldRetry 
+    };
+
+    this._notifyError(enhancedError);
   }
 
   /**

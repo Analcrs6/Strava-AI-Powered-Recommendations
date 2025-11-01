@@ -138,7 +138,8 @@ function Signup() {
           provider: 'email'
         };
         
-        login(user);
+        // Pass tokens to login function
+        login(user, responseData.access_token, responseData.refresh_token);
         console.log('✅ User created and logged in:', user.id, '(' + user.name + ')');
         navigate('/');
       }
