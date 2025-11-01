@@ -935,7 +935,13 @@ function RecordActivity() {
               <div className="space-y-3">
                 <div className="flex space-x-3">
                 <button
-                  onClick={() => navigate(-1)}
+                  onClick={() => {
+                    // Clean up before leaving
+                    if (demoIntervalRef.current) {
+                      clearInterval(demoIntervalRef.current);
+                    }
+                    navigate('/', { replace: false });
+                  }}
                   className="flex-1 px-4 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition font-medium text-sm border border-gray-600"
                 >
                   Cancel
@@ -1028,7 +1034,16 @@ function RecordActivity() {
             </div>
           </div>
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              // Clean up before leaving
+              if (demoIntervalRef.current) {
+                clearInterval(demoIntervalRef.current);
+              }
+              if (locationServiceRef.current?.isTracking) {
+                locationServiceRef.current.stopTracking();
+              }
+              navigate('/', { replace: false });
+            }}
             className="px-4 py-2 text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition text-sm font-medium"
           >
             Cancel
