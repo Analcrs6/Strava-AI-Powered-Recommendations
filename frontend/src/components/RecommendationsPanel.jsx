@@ -169,14 +169,29 @@ function RecommendationsPanel({ selectedActivity }) {
         )}
       </div>
 
-      <div className="mb-4 p-4 bg-strava-gray-light rounded-lg">
-        <p className="text-sm text-gray-600">
-          Based on: <span className="font-medium text-gray-900 capitalize">{selectedActivity.sport}</span>
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          {formatDistance(selectedActivity.distance_m)} · {formatDuration(selectedActivity.duration_s)}
-        </p>
-      </div>
+      {/* Show activity context only if an activity is selected */}
+      {selectedActivity && recommendMode === 'similar' && (
+        <div className="mb-4 p-4 bg-strava-gray-light rounded-lg">
+          <p className="text-sm text-gray-600">
+            Based on: <span className="font-medium text-gray-900 capitalize">{selectedActivity.sport}</span>
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {formatDistance(selectedActivity.distance_m)} · {formatDuration(selectedActivity.duration_s)}
+          </p>
+        </div>
+      )}
+
+      {/* Show user context for "What to Do Next" mode */}
+      {recommendMode === 'next' && user && (
+        <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+          <p className="text-sm text-green-800 font-medium">
+            🎯 Personalized Predictions for {user.name || 'You'}
+          </p>
+          <p className="text-xs text-green-600 mt-1">
+            Based on your activity history and patterns
+          </p>
+        </div>
+      )}
 
       {loading && (
         <div className="flex justify-center py-8">
@@ -193,8 +208,20 @@ function RecommendationsPanel({ selectedActivity }) {
 
       {!loading && !error && recommendations.length === 0 && (
         <div className="text-center py-8">
-          <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm text-gray-600">No recommendations found</p>
+          {recommendMode === 'next' ? (
+            <Zap className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+          ) : (
+            <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+          )}
+          <p className="text-sm font-medium text-gray-700 mb-1">
+            {recommendMode === 'next' ? 'No predictions available yet' : 'No recommendations found'}
+          </p>
+          <p className="text-xs text-gray-500">
+            {recommendMode === 'next' 
+              ? 'Create or record more activities to get personalized predictions'
+              : 'Try selecting a different activity or adjusting the strategy'
+            }
+          </p>
         </div>
       )}
 

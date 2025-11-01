@@ -512,6 +512,102 @@ class Recommender:
             # Fallback
             print(f"   ⚠️  Fell through to fallback strategy")
             return list(zip(candidates[:k], candidate_scores[:k]))
+    
+    def search_by_activity_features(
+        self,
+        distance_m: float,
+        duration_s: float,
+        elevation_gain_m: float,
+        hr_avg: float,
+        k: int,
+        strategy: RecommenderStrategy = "content",
+        lambda_diversity: float = 0.3,
+        db_session = None,
+        exclude_activity_id: str = None
+    ) -> List[Tuple[str, float]]:
+        """
+        Get recommendations based on activity features by searching the main database.
+        This bypasses the FAISS index (which only contains demo routes R001-R100)
+        and searches real user activities in the database.
+        
+        Args:
+            distance_m: Distance in meters
+            duration_s: Duration in seconds
+            elevation_gain_m: Elevation gain in meters
+            hr_avg: Average heart rate in bpm
+            k: Number of recommendations to return
+            strategy: Recommendation strategy (content, content_mmr, ensemble, ensemble_mmr)
+            lambda_diversity: MMR diversity parameter (0-1)
+            db_session: Database session for querying activities
+            exclude_activity_id: Activity ID to exclude from results (typically the query activity itself)
+            
+        Returns:
+            List of (activity_id, similarity_score) tuples
+        """
+        from .. import models
+        from sklearn.metrics.pairwise import cosine_similarity
+        
+        print(f"  📊 Searching main database for similar activities...")
+        print(f"     Query features: distance={distance_m}m, duration={duration_s}s, elevation={elevation_gain_m}m, hr={hr_avg}bpm")
+        
+        if db_session is None:
+            print(f"  ❌ No database session provided, cannot search main database")
+            return []
+        
+        # Query all activities from main database (exclude demo data)
+        all_activities = db_session.query(models.Activity).filter(
+            models.Activity.demo_session_id == None
+        ).all()
+        
+        print(f"  📊 Found {len(all_activities)} activities in main database")
+        
+        if len(all_activities) == 0:
+            print(f"  ⚠️  No activities in main database to compare against")
+            return []
+        
+        # Build feature matrix for all activities
+        query_vector = np.array([distance_m, duration_s, elevation_gain_m, hr_avg], dtype='float32').reshape(1, -1)
+        
+        activity_vectors = []
+        activity_ids = []
+        
+        for activity in all_activities:
+            # Skip the query activity itself
+            if exclude_activity_id and activity.id == exclude_activity_id:
+                continue
+                
+            act_vector = np.array([
+                activity.distance_m,
+                activity.duration_s,
+                activity.elevation_gain_m or 0.0,
+                activity.hr_avg or 0.0
+            ], dtype='float32')
+            activity_vectors.append(act_vector)
+            activity_ids.append(activity.id)
+        
+        if len(activity_vectors) == 0:
+            print(f"  ⚠️  No activities left after filtering")
+            return []
+        
+        activity_matrix = np.array(activity_vectors)
+        
+        # Compute cosine similarity
+        similarities = cosine_similarity(query_vector, activity_matrix)[0]
+        
+        # Create list of (activity_id, similarity_score) tuples
+        results = list(zip(activity_ids, similarities))
+        
+        # Sort by similarity (descending)
+        results.sort(key=lambda x: x[1], reverse=True)
+        
+        # Take top k
+        results = results[:k]
+        
+        print(f"  ✅ Found {len(results)} similar activities from main database")
+        if results:
+            print(f"     Top result: {results[0][0]} with similarity {results[0][1]:.3f}")
+        
+        return results
 
     def search_by_vector(self, vec: np.ndarray, k: int) -> List[Tuple[str, float]]:
         self.ensure_ready()

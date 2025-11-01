@@ -70,21 +70,53 @@ def recommend(req: RecommendRequest, db: Session = Depends(get_db)):
         
         # Debug: Check if activity exists in FAISS index
         recsys.ensure_ready()
+        activity_in_index = False
         if recsys.idmap is not None:
             import numpy as np
             if activity_id_for_search in recsys.idmap:
                 print(f"✅ Activity found in FAISS index")
+                activity_in_index = True
             else:
                 print(f"❌ Activity NOT found in FAISS index")
                 print(f"   Available IDs sample (first 10): {list(recsys.idmap[:min(10, len(recsys.idmap))])}")
                 print(f"   Total routes in index: {len(recsys.idmap)}")
         
-        items = recsys.search_by_activity(
-            activity_id_for_search, 
-            req.k,
-            strategy=req.strategy,
-            lambda_diversity=req.lambda_diversity
-        )
+        # If activity not in index, try to search by features (for real user activities)
+        if not activity_in_index:
+            print(f"🔍 Activity not in index, searching for it in main database...")
+            activity = db.query(models.Activity).filter(
+                models.Activity.id == req.activity_id
+            ).first()
+            
+            if activity:
+                print(f"✅ Found activity in database: {activity.id}")
+                print(f"   Features: distance={activity.distance_m}m, duration={activity.duration_s}s, elevation={activity.elevation_gain_m}m, hr={activity.hr_avg}bpm")
+                
+                # Extract features and compute recommendations using feature vector
+                # Search in main database, not the demo FAISS index
+                items = recsys.search_by_activity_features(
+                    distance_m=activity.distance_m,
+                    duration_s=activity.duration_s,
+                    elevation_gain_m=activity.elevation_gain_m or 0.0,
+                    hr_avg=activity.hr_avg or 0.0,
+                    k=req.k,
+                    strategy=req.strategy,
+                    lambda_diversity=req.lambda_diversity,
+                    db_session=db,
+                    exclude_activity_id=activity.id
+                )
+                print(f"📊 Found {len(items)} recommendations using feature-based search")
+            else:
+                print(f"❌ Activity not found in main database either")
+                raise HTTPException(404, f"Activity {req.activity_id} not found in index or database")
+        else:
+            # Activity in index, use normal search
+            items = recsys.search_by_activity(
+                activity_id_for_search, 
+                req.k,
+                strategy=req.strategy,
+                lambda_diversity=req.lambda_diversity
+            )
         
         print(f"📊 Returned {len(items)} items using strategy: {req.strategy}")
         
