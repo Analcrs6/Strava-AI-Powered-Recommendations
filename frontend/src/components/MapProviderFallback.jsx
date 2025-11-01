@@ -21,6 +21,7 @@ function MapProviderFallback({
   center,
   zoom = 13,
   markers = [],
+  route = null,
   proximityCircle = null,
   onMarkerClick = null,
   onMapClick = null,
@@ -81,6 +82,7 @@ function MapProviderFallback({
           center={center}
           zoom={zoom}
           markers={markers}
+          route={route}
           proximityCircle={proximityCircle}
           onMarkerClick={onMarkerClick}
           onMapClick={onMapClick}

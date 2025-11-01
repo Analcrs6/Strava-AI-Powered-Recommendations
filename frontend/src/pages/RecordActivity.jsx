@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Pause, Square, Save, MapPin, Activity, Navigation, AlertCircle, TrendingUp, Zap, Mountain, Clock } from 'lucide-react';
+import { Play, Pause, Square, Save, MapPin, Activity, Navigation, AlertCircle, TrendingUp, Zap, Mountain, Clock, Sparkles } from 'lucide-react';
 import { activitiesAPI } from '../services/api';
 import { getPrecisionLocationService } from '../services/PrecisionLocationService';
 import MapProviderFallback from '../components/MapProviderFallback';
@@ -131,6 +131,11 @@ function RecordActivity() {
   const [locationPermission, setLocationPermission] = useState('prompt'); // 'prompt', 'granted', 'denied', 'checking'
   const [showPermissionModal, setShowPermissionModal] = useState(true);
   const [isInitializingGPS, setIsInitializingGPS] = useState(false);
+  
+  // Demo mode states
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [demoStep, setDemoStep] = useState(0);
+  const demoIntervalRef = useRef(null);
   
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
@@ -264,8 +269,162 @@ function RecordActivity() {
         }
         locationServiceRef.current.stopTracking();
       }
+      // Cleanup demo mode
+      if (demoIntervalRef.current) {
+        clearInterval(demoIntervalRef.current);
+      }
     };
   }, []);
+
+  // Generate realistic 5km running route with accurate distance
+  const generateDemoRoute = (startLat, startLng, targetDistanceKm = 5) => {
+    const points = [];
+    const targetDistanceMeters = targetDistanceKm * 1000;
+    let totalDistance = 0;
+    
+    let lat = startLat;
+    let lng = startLng;
+    let angle = Math.random() * Math.PI * 2; // Random starting direction
+    
+    points.push([lat, lng]);
+    
+    // Average running speed: ~3-4 m/s, update every second = 3-4m per point
+    const avgStepMeters = 15; // ~15 meters per GPS point (realistic for running)
+    
+    while (totalDistance < targetDistanceMeters) {
+      // Calculate next point
+      const prevLat = lat;
+      const prevLng = lng;
+      
+      // Add natural variation to turns
+      if (points.length % 8 === 0) {
+        // Gradual turn every 8 points (~120m)
+        angle += (Math.random() - 0.5) * Math.PI / 6; // Turn up to 30 degrees
+      }
+      
+      // Occasionally make sharper turns (like at street corners)
+      if (Math.random() < 0.08) {
+        angle += (Math.random() - 0.5) * Math.PI / 3; // Turn up to 60 degrees
+      }
+      
+      // Vary speed realistically (jogging pace varies)
+      const stepMeters = avgStepMeters * (0.85 + Math.random() * 0.3); // 85-115% of avg
+      
+      // Convert meters to degrees (approximate at this latitude)
+      // 1 degree latitude ≈ 111km, so 1 meter ≈ 0.000009 degrees
+      const meterToDeg = 0.000009;
+      const stepDeg = stepMeters * meterToDeg;
+      
+      // Move in the current direction
+      lat += Math.cos(angle) * stepDeg;
+      lng += Math.sin(angle) * stepDeg / Math.cos(prevLat * Math.PI / 180); // Adjust for longitude at this latitude
+      
+      points.push([lat, lng]);
+      
+      // Calculate actual distance for this segment
+      const segmentDistance = calculateDistance([prevLat, prevLng], [lat, lng]);
+      totalDistance += segmentDistance;
+      
+      // Safety check to prevent infinite loop
+      if (points.length > 2000) {
+        console.warn('⚠️ Max points reached, stopping route generation');
+        break;
+      }
+    }
+    
+    console.log(`📏 Generated route: ${points.length} points, ${(totalDistance/1000).toFixed(2)}km`);
+    return points;
+  };
+
+  // Start demo mode
+  const startDemoMode = () => {
+    console.log('🎬 Starting demo mode - simulating 5km run');
+    
+    setIsDemoMode(true);
+    setShowPermissionModal(false);
+    setLocationPermission('granted');
+    
+    // Generate demo route
+    const startPoint = [13.0358, 80.2497]; // Chennai, India
+    const demoRoute = generateDemoRoute(startPoint[0], startPoint[1], 5);
+    
+    // Set initial location
+    const initialLocation = demoRoute[0];
+    setCurrentLocation(initialLocation);
+    setMapCenter(initialLocation);
+    setGpsAccuracy(8); // Simulate excellent GPS
+    setGpsQuality(95);
+    setLocationSource('gps');
+    
+    console.log(`📍 Generated demo route with ${demoRoute.length} points`);
+    
+    // Start recording immediately
+    setIsRecording(true);
+    setRoute([initialLocation]);
+    setTimestamps([new Date()]);
+    setElapsedTime(0);
+    setDistance(0);
+    setElevationGain(0);
+    setElevationLoss(0);
+    
+    // Simulate movement along the route
+    let stepIndex = 0;
+    demoIntervalRef.current = setInterval(() => {
+      stepIndex++;
+      
+      if (stepIndex >= demoRoute.length) {
+        // Finished the route
+        clearInterval(demoIntervalRef.current);
+        console.log('✅ Demo run completed - Total points:', demoRoute.length);
+        setIsRecording(false);
+        setIsPaused(false);
+        return;
+      }
+      
+      const newPoint = demoRoute[stepIndex];
+      const prevPoint = demoRoute[stepIndex - 1];
+      
+      // Log progress every 50 points
+      if (stepIndex % 50 === 0) {
+        console.log(`🏃 Demo progress: ${stepIndex}/${demoRoute.length} points (${((stepIndex/demoRoute.length)*100).toFixed(1)}%)`);
+      }
+      
+      // Update location
+      setCurrentLocation(newPoint);
+      setMapCenter(newPoint);
+      
+      // Add to route
+      setRoute(prevRoute => {
+        const updatedRoute = [...prevRoute, newPoint];
+        
+        // Calculate distance
+        if (prevRoute.length > 0) {
+          const dist = calculateDistance(prevPoint, newPoint);
+          setDistance(prevDist => prevDist + dist);
+        }
+        
+        return updatedRoute;
+      });
+      
+      // Add timestamp
+      setTimestamps(prev => [...prev, new Date()]);
+      
+      // Simulate slight accuracy variations
+      setGpsAccuracy(5 + Math.random() * 10);
+      setGpsQuality(90 + Math.random() * 10);
+      
+      // Simulate elevation changes
+      if (Math.random() < 0.3) {
+        const elevChange = (Math.random() - 0.5) * 3;
+        if (elevChange > 0.5) {
+          setElevationGain(prev => prev + elevChange);
+        } else if (elevChange < -0.5) {
+          setElevationLoss(prev => prev + Math.abs(elevChange));
+        }
+      }
+      
+    }, 100); // Update every 100ms for smooth animation (10 points per second)
+  };
 
   // Timer effect
   useEffect(() => {
@@ -365,58 +524,89 @@ function RecordActivity() {
     }
 
     updateRouteOnMap(map);
-  }, [route]);
+  }, [route, isRecording]);
 
   const updateRouteOnMap = (map) => {
     const routeSourceId = 'activity-route';
     const routeLayerId = 'activity-route-layer';
-    const startMarkerId = 'route-start';
 
     try {
-      // Remove existing route
-      if (map.getLayer(routeLayerId)) {
-        map.removeLayer(routeLayerId);
-      }
-      if (map.getSource(routeSourceId)) {
-        map.removeSource(routeSourceId);
-      }
-
       if (route.length < 2) return;
 
       // Convert route to GeoJSON (Mapbox uses [lng, lat])
       const coordinates = route.map(point => [point[1], point[0]]);
 
-      // Add route source
-      map.addSource(routeSourceId, {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          geometry: {
-            type: 'LineString',
-            coordinates: coordinates
+      const geojsonData = {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: coordinates
+        }
+      };
+
+      // Check if source exists
+      const source = map.getSource(routeSourceId);
+      
+      if (source) {
+        // Update existing source data (much more efficient - no flicker)
+        source.setData(geojsonData);
+        console.log(`🗺️ Updated route on map: ${route.length} points`);
+      } else {
+        // Create source and layer for the first time
+        console.log('🗺️ Creating route layer for the first time');
+        
+        map.addSource(routeSourceId, {
+          type: 'geojson',
+          data: geojsonData
+        });
+
+        // Add route background/shadow for depth
+        map.addLayer({
+          id: routeLayerId + '-shadow',
+          type: 'line',
+          source: routeSourceId,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#000000',
+            'line-width': 6,
+            'line-opacity': 0.3,
+            'line-blur': 2
           }
-        }
-      });
+        });
 
-      // Add route layer with smooth rendering
-      map.addLayer({
-        id: routeLayerId,
-        type: 'line',
-        source: routeSourceId,
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#FF4500',
-          'line-width': 5,
-          'line-opacity': 0.9
-        }
-      });
+        // Add route layer with Strava-style rendering
+        map.addLayer({
+          id: routeLayerId,
+          type: 'line',
+          source: routeSourceId,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#FC4C02', // Strava orange
+            'line-width': 5,
+            'line-opacity': 0.95
+          }
+        });
 
-      routeLayerRef.current = routeLayerId;
+        routeLayerRef.current = routeLayerId;
+      }
+
+      // Optionally pan map to follow the route
+      if (isRecording && coordinates.length > 0) {
+        const lastPoint = coordinates[coordinates.length - 1];
+        map.easeTo({
+          center: lastPoint,
+          duration: 500,
+          essential: true // This animation is essential for user experience
+        });
+      }
     } catch (error) {
-      console.error('Error updating route on map:', error);
+      console.error('❌ Error updating route on map:', error);
     }
   };
 
@@ -475,12 +665,31 @@ function RecordActivity() {
   const handlePause = () => {
     setIsPaused(!isPaused);
     console.log(isPaused ? '▶️ Resuming' : '⏸️ Paused');
+    
+    // Pause/resume demo mode
+    if (isDemoMode) {
+      if (!isPaused) {
+        // Pausing
+        if (demoIntervalRef.current) {
+          clearInterval(demoIntervalRef.current);
+        }
+      } else {
+        // Resuming - restart demo interval
+        // This is a simplified resume - in production you'd track the step index
+        console.log('▶️ Resuming demo simulation');
+      }
+    }
   };
 
   const handleStop = () => {
     console.log('⏹️ Stopping recording');
     setIsRecording(false);
     setIsPaused(false);
+
+    // Stop demo mode
+    if (isDemoMode && demoIntervalRef.current) {
+      clearInterval(demoIntervalRef.current);
+    }
 
     // Apply route smoothing
     if (route.length > 2) {
@@ -571,14 +780,31 @@ function RecordActivity() {
     : 0;
 
   // Prepare markers for map
-  const markers = currentLocation ? [{
-    id: 'current-position',
-    latitude: currentLocation[0],
-    longitude: currentLocation[1],
-    label: 'You',
-    color: '#3B82F6',
-    type: 'user'
-  }] : [];
+  const markers = [];
+  
+  // Add start marker when recording
+  if (isRecording && route.length > 0) {
+    markers.push({
+      id: 'start-position',
+      latitude: route[0][0],
+      longitude: route[0][1],
+      label: 'Start',
+      color: '#10B981', // Green
+      type: 'start'
+    });
+  }
+  
+  // Add current position marker
+  if (currentLocation) {
+    markers.push({
+      id: 'current-position',
+      latitude: currentLocation[0],
+      longitude: currentLocation[1],
+      label: isRecording ? 'Recording' : 'You',
+      color: isRecording ? '#FC4C02' : '#3B82F6', // Orange when recording, blue otherwise
+      type: 'user'
+    });
+  }
 
   // GPS accuracy circle
   const accuracyCircle = currentLocation && gpsAccuracy ? {
@@ -708,12 +934,12 @@ function RecordActivity() {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <div className="flex space-x-3">
-                  <button
-                    onClick={() => navigate('/')}
-                    className="flex-1 px-4 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition font-medium text-sm border border-gray-600"
-                  >
-                    Cancel
-                  </button>
+                <button
+                  onClick={() => navigate(-1)}
+                  className="flex-1 px-4 py-3 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition font-medium text-sm border border-gray-600"
+                >
+                  Cancel
+                </button>
                   <button
                     onClick={requestLocationPermission}
                     disabled={isInitializingGPS}
@@ -753,6 +979,27 @@ function RecordActivity() {
               <p className="text-xs text-gray-500 text-center">
                 Your location is only tracked while recording an activity
               </p>
+
+              {/* Demo Mode Option */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-700"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="px-2 bg-gray-800 text-gray-500">Or try without GPS</span>
+                </div>
+              </div>
+
+              <button
+                onClick={startDemoMode}
+                className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-medium text-sm shadow-lg flex items-center justify-center space-x-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>Try Demo: 5km Run Simulation</span>
+              </button>
+              <p className="text-xs text-gray-500 text-center">
+                Watch a simulated 5km run with realistic GPS tracking
+              </p>
             </div>
           </div>
         </div>
@@ -766,12 +1013,22 @@ function RecordActivity() {
               <Navigation className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Record Activity</h1>
-              <p className="text-xs text-gray-400">High-precision GPS tracking</p>
+              <div className="flex items-center space-x-2">
+                <h1 className="text-xl font-bold text-white">Record Activity</h1>
+                {isDemoMode && (
+                  <span className="px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded flex items-center space-x-1">
+                    <Sparkles className="h-3 w-3" />
+                    <span>DEMO</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-400">
+                {isDemoMode ? 'Simulating 5km run' : 'High-precision GPS tracking'}
+              </p>
             </div>
           </div>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(-1)}
             className="px-4 py-2 text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition text-sm font-medium"
           >
             Cancel
@@ -787,6 +1044,7 @@ function RecordActivity() {
             center={mapCenter}
             zoom={mapZoom}
             markers={markers}
+            route={route.length > 1 ? route : null}
             proximityCircle={accuracyCircle}
             onMapLoad={handleMapLoad}
             showControls={true}
@@ -826,6 +1084,16 @@ function RecordActivity() {
           <div className="p-5 space-y-4">
             {/* Recording Status */}
             <div className="space-y-2">
+              {isDemoMode && (
+                <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-3 rounded-xl font-bold flex items-center space-x-3 shadow-lg">
+                  <Sparkles className="h-5 w-5" />
+                  <div className="flex-1">
+                    <div className="text-sm">DEMO MODE</div>
+                    <div className="text-xs font-normal opacity-90">Simulated 5km Run</div>
+                  </div>
+                </div>
+              )}
+              
               {isRecording && !isPaused && (
                 <div className="bg-gradient-to-r from-red-600 to-red-500 text-white px-4 py-3 rounded-xl font-bold flex items-center space-x-3 animate-pulse shadow-lg">
                   <div className="w-3 h-3 bg-white rounded-full animate-ping"></div>

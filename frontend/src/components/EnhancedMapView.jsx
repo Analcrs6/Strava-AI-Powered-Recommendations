@@ -36,6 +36,7 @@ function EnhancedMapView({
   center = [37.7749, -122.4194], // [latitude, longitude]
   zoom = 13,
   markers = [], // Array of { id, latitude, longitude, label, color, type }
+  route = null, // Array of [lat, lon] points for route line
   proximityCircle = null, // { center: [lat, lon], radius: meters }
   onMarkerClick = null,
   onMapClick = null,
@@ -299,6 +300,79 @@ function EnhancedMapView({
       }
     });
   }, [proximityCircle, isMapLoaded]);
+
+  // Update route line
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded) return;
+
+    const map = mapRef.current;
+    const sourceId = 'activity-route';
+    const shadowLayerId = 'activity-route-shadow';
+    const layerId = 'activity-route-layer';
+
+    // Remove existing route layers
+    if (map.getLayer(layerId)) map.removeLayer(layerId);
+    if (map.getLayer(shadowLayerId)) map.removeLayer(shadowLayerId);
+    if (map.getSource(sourceId)) map.removeSource(sourceId);
+
+    if (!route || route.length < 2) return;
+
+    // Convert route to GeoJSON (Mapbox uses [lng, lat])
+    const coordinates = route.map(point => [point[1], point[0]]);
+
+    const geojsonData = {
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: coordinates
+      }
+    };
+
+    try {
+      // Add route source
+      map.addSource(sourceId, {
+        type: 'geojson',
+        data: geojsonData
+      });
+
+      // Add shadow layer for depth
+      map.addLayer({
+        id: shadowLayerId,
+        type: 'line',
+        source: sourceId,
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#000000',
+          'line-width': 7,
+          'line-opacity': 0.3,
+          'line-blur': 2
+        }
+      });
+
+      // Add main route layer with Strava orange
+      map.addLayer({
+        id: layerId,
+        type: 'line',
+        source: sourceId,
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#FC4C02', // Strava orange
+          'line-width': 5,
+          'line-opacity': 0.95
+        }
+      });
+
+      console.log(`🗺️ Route rendered on map: ${route.length} points`);
+    } catch (error) {
+      console.error('❌ Error rendering route:', error);
+    }
+  }, [route, isMapLoaded]);
 
   const handleStyleChange = useCallback((styleId) => {
     setMapStyle(styleId);
