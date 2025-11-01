@@ -172,9 +172,20 @@ function NearbyFollowers() {
     setLoading(true);
     try {
       const response = await locationAPI.getMutualFollowersLocations(user.id, 50);
-      setNearbyUsers(response.data || []);
+      const serverData = response.data || [];
+      
+      // If server returns data, use it; otherwise keep dummy data
+      if (serverData.length > 0) {
+        setNearbyUsers(serverData);
+      } else {
+        // Keep dummy data if no real data available
+        console.log('📍 No nearby followers from server, keeping demo data');
+        // Don't clear dummy data - keep it for demonstration
+      }
     } catch (error) {
       console.error('Error loading nearby followers:', error);
+      // On error, keep the dummy data for demonstration
+      console.log('📍 API error, keeping demo data');
     } finally {
       setLoading(false);
     }
@@ -188,17 +199,24 @@ function NearbyFollowers() {
       const alerts = response.data || [];
       
       // Show new alerts
-      alerts.forEach(alert => {
-        // Check if we've already shown this alert
-        const existing = proximityAlerts.find(a => a.user_id === alert.user_id);
-        if (!existing) {
-          showNotification(alert);
-        }
-      });
-      
-      setProximityAlerts(alerts);
+      if (alerts.length > 0) {
+        alerts.forEach(alert => {
+          // Check if we've already shown this alert
+          const existing = proximityAlerts.find(a => a.user_id === alert.user_id);
+          if (!existing) {
+            showNotification(alert);
+          }
+        });
+        
+        setProximityAlerts(alerts);
+      } else {
+        // Keep dummy alerts for demonstration
+        console.log('📍 No proximity alerts from server, keeping demo data');
+      }
     } catch (error) {
       console.error('Error checking proximity:', error);
+      // Keep dummy alerts on error
+      console.log('📍 API error, keeping demo alerts');
     }
   };
 
@@ -342,11 +360,18 @@ function NearbyFollowers() {
           {/* Nearby Users List */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center space-x-2 mb-4">
-                <Users className="h-5 w-5 text-slate-700" />
-                <h2 className="text-lg font-semibold text-slate-900">
-                  Nearby ({nearbyUsers.length})
-                </h2>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Users className="h-5 w-5 text-slate-700" />
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Nearby ({nearbyUsers.length})
+                  </h2>
+                </div>
+                {nearbyUsers === DUMMY_NEARBY_USERS && (
+                  <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
+                    Demo Data
+                  </span>
+                )}
               </div>
 
               {loading ? (

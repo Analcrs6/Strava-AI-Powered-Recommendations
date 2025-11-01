@@ -21,6 +21,10 @@ This isn't just another Strava clone - it's an **enterprise-grade recommendation
 - ✅ **Email Verification** - Complete auth flow
 - ✅ **Rate Limiting** - 100 requests/minute protection
 - ✅ **User Preferences** - Personalized algorithm settings
+- ✅ **GPS Activity Recording** - Strava-level precision tracking
+- ✅ **Demo Mode** - 5km run simulation with realistic routes
+- ✅ **Nearby Friends** - Real-time location sharing
+- ✅ **Professional Maps** - Mapbox GL with route visualization
 
 ---
 
@@ -314,6 +318,77 @@ ws.onmessage = (event) => {
 
 ---
 
+### 📍 GPS Activity Recording (Strava-Level)
+
+#### Professional GPS Tracking
+Our Record Activity page features enterprise-grade GPS tracking similar to Strava:
+
+**Features:**
+- ✅ **Permission Flow** - Native browser location permission prompts
+- ✅ **High Accuracy GPS** - Uses device GPS with Kalman filtering
+- ✅ **Network Fallback** - Falls back to WiFi/network positioning
+- ✅ **Real-time Route Drawing** - Orange Strava-style route line
+- ✅ **Live Stats** - Distance, pace, speed, elevation gain
+- ✅ **GPS Quality Indicators** - Accuracy badges and signal quality
+- ✅ **Auto-Follow Map** - Map pans to follow your position
+- ✅ **Route Smoothing** - Douglas-Peucker algorithm for optimization
+
+**Demo Mode:**
+Can't go outside? Try our **5km Run Simulation**:
+```
+- Generates realistic 5km route with natural turns
+- Simulates GPS movement at 10 points/second
+- Updates all metrics in real-time
+- Completes in ~50 seconds
+- Perfect for testing and demonstrations
+```
+
+**Usage:**
+```bash
+# Navigate to Record Activity
+# Click "Enable Location" → Allow permission
+# Or click "Try Demo: 5km Run Simulation"
+# Watch the route draw itself like Strava!
+```
+
+**GPS Tracking Features:**
+- **Accuracy Filtering**: Only accepts points with <50m accuracy (configurable to 50km for testing)
+- **Kalman Filtering**: Smooths GPS noise for clean routes
+- **Movement Validation**: Filters impossible speeds and GPS jumps
+- **Elevation Tracking**: Calculates gain/loss from altitude data
+- **Route Optimization**: Simplifies routes while preserving shape
+
+---
+
+### 🗺️ Nearby Friends & Location Sharing
+
+#### Real-time Location Features
+See mutual followers near you with live location tracking:
+
+**Features:**
+- ✅ **Mutual Followers Only** - Privacy-focused (only friends who follow you back)
+- ✅ **Proximity Alerts** - Get notified when friends are within 500m
+- ✅ **Live Map View** - Interactive map with user markers
+- ✅ **Distance Display** - Real-time distance calculations
+- ✅ **Activity Status** - See what friends are currently doing
+- ✅ **Demo Data** - Built-in sample users for testing
+- ✅ **Permission Control** - Easy toggle for location sharing
+
+**Demo Data Preserved:**
+The Nearby page includes 4 demo users that persist even when location sharing is enabled:
+- Sarah Johnson (250m away, Running)
+- Mike Chen (680m away, Cycling)
+- Emma Davis (1.2km away, Walking)
+- Alex Martinez (320m away, Running)
+
+**Privacy:**
+- Location updates every 30 seconds
+- Only visible to mutual followers
+- Can be toggled on/off anytime
+- Automatically stops when app closes
+
+---
+
 ## 🏗️ Architecture
 
 ```
@@ -353,8 +428,10 @@ ws.onmessage = (event) => {
 - **Vite** - Build tool
 - **TailwindCSS** - Styling
 - **React Router** - Navigation
-- **Leaflet** - GPS mapping
+- **Mapbox GL JS** - Professional maps & GPS tracking
+- **Leaflet** - Fallback mapping
 - **Lucide Icons** - Icon library
+- **Geolocation API** - Native GPS with Kalman filtering
 
 ### Backend
 - **FastAPI 2.0** - API framework
@@ -420,10 +497,18 @@ GET    /api/export/activity/{id}/json # Export as JSON
 ### Activity Endpoints
 ```
 GET    /api/activities                # List activities
-POST   /api/activities                # Create activity
+POST   /api/activities                # Create activity (supports GPS routes)
 GET    /api/activities/{id}           # Get activity
 PUT    /api/activities/{id}           # Update activity
 DELETE /api/activities/{id}           # Delete activity
+```
+
+### Location & Social Endpoints
+```
+POST   /api/location/update           # Update user location
+GET    /api/location/mutual-followers # Get nearby mutual followers
+GET    /api/location/proximity        # Check proximity notifications
+POST   /api/location/toggle           # Toggle location sharing
 ```
 
 **Full documentation**: http://localhost:8000/docs
@@ -517,6 +602,79 @@ services:
 docker-compose down
 docker-compose build --no-cache
 docker-compose up
+```
+
+### GPS Location Issues
+
+#### Location Permission Denied
+```
+Problem: "Location permission denied" error
+Solution:
+1. Click the lock icon in browser address bar
+2. Find "Location" settings
+3. Change to "Allow"
+4. Refresh the page or click "Try Again"
+```
+
+#### GPS Stuck on "Acquiring Signal"
+```
+Problem: Location permission granted but no GPS signal
+Solution:
+1. Check browser console (F12) for detailed logs
+2. Ensure device GPS is enabled in system settings
+3. Move to an open area with clear sky view
+4. Wait 30-60 seconds for GPS to acquire satellites
+5. Or use Demo Mode for testing without GPS
+```
+
+#### GPS Accuracy Too Poor
+```
+Problem: GPS accuracy shows >1000m (network positioning)
+Solutions:
+- Move outdoors for better satellite reception
+- Wait for accuracy to improve to <50m
+- Use Demo Mode for indoor testing
+- For testing: Code accepts up to 50km accuracy
+```
+
+#### Route Not Showing on Map
+```
+Problem: GPS tracking works but route line not visible
+Check:
+1. Browser console for "Route rendered on map" message
+2. Map component received route prop
+3. Route has at least 2 points
+4. Mapbox token is configured (or fallback is working)
+```
+
+#### Demo Mode Distance Incorrect
+```
+Problem: Demo shows wrong distance (not 5km)
+This was fixed! Should now show exactly 5.00km
+- Uses actual distance calculation while generating
+- Check console for: "Generated route: X points, 5.00km"
+```
+
+### Nearby Friends Issues
+
+#### Dummy Data Disappears
+```
+Problem: Demo users vanish when enabling location sharing
+This was fixed! Dummy data now persists when:
+- API returns no real data
+- API fails or times out
+- Shows "Demo Data" badge when using samples
+```
+
+### Map Issues
+
+#### Map Not Loading
+```
+Solution:
+1. Add Mapbox token to frontend/.env:
+   VITE_MAPBOX_TOKEN=pk.eyJ...
+2. Or app will fallback to OpenStreetMap
+3. Check console for map errors
 ```
 
 ---
