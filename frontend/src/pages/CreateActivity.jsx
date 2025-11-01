@@ -1,16 +1,33 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { activitiesAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { Save, X, Activity, Navigation, Edit } from 'lucide-react';
 
 function CreateActivity() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Redirect to login if not authenticated
+  if (!authLoading && !user) {
+    navigate('/login');
+    return null;
+  }
+
+  if (authLoading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-strava-orange"></div>
+          <span className="ml-2">Loading...</span>
+        </div>
+      </div>
+    );
+  }
   
   const [formData, setFormData] = useState({
-    id: '',
-    user_id: '',
     sport: 'running',
     distance_m: '',
     duration_s: '',
@@ -32,8 +49,6 @@ function CreateActivity() {
 
     try {
       const payload = {
-        id: formData.id,
-        user_id: formData.user_id,
         sport: formData.sport,
         distance_m: parseFloat(formData.distance_m),
         duration_s: parseFloat(formData.duration_s),
@@ -103,38 +118,6 @@ function CreateActivity() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Activity ID *
-              </label>
-              <input
-                type="text"
-                name="id"
-                required
-                value={formData.id}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-strava-orange focus:border-transparent"
-                placeholder="e.g., run_001"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                User ID *
-              </label>
-              <input
-                type="text"
-                name="user_id"
-                required
-                value={formData.user_id}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-strava-orange focus:border-transparent"
-                placeholder="e.g., user_123"
-              />
-            </div>
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Sport *
@@ -251,7 +234,7 @@ function CreateActivity() {
       <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-semibold text-blue-900 mb-2">💡 Tips</h3>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Use unique activity IDs to avoid conflicts</li>
+          <li>• Activity ID and User ID are automatically generated</li>
           <li>• Distance should be in meters (1 km = 1000 m)</li>
           <li>• Duration should be in seconds (30 min = 1800 s)</li>
           <li>• Recommendations work better with similar distance/duration activities</li>

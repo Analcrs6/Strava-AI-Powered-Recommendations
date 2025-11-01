@@ -12,25 +12,36 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check if user is logged in (from localStorage or API)
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const storedToken = localStorage.getItem('access_token');
+    
+    if (storedUser && storedToken) {
       try {
         setUser(JSON.parse(storedUser));
+        setToken(storedToken);
       } catch (error) {
         console.error('Error parsing stored user:', error);
         localStorage.removeItem('user');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
       }
     }
     setLoading(false);
   }, []);
 
-  const login = (userData) => {
+  const login = (userData, accessToken, refreshToken) => {
     setUser(userData);
+    setToken(accessToken);
     localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('access_token', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+    }
     console.log('✅ User logged in:', userData.id);
   };
 
@@ -39,7 +50,10 @@ export const AuthProvider = ({ children }) => {
       console.log('👋 User logged out:', user.id);
     }
     setUser(null);
+    setToken(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('location_sharing_enabled');
   };
 
@@ -50,7 +64,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

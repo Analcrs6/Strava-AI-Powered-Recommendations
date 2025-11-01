@@ -71,7 +71,9 @@ function Login() {
         provider: provider
       };
       
-      login(newUser);
+      // For social login demo, we'll create a simple token (in production, this should be handled by OAuth)
+      const demoToken = `demo_token_${userId}`;
+      login(newUser, demoToken, null);
       console.log('✅ User logged in via', provider, ':', userId);
       navigate('/');
     } catch (err) {
@@ -114,7 +116,7 @@ function Login() {
         provider: 'email'
       };
       
-      login(user);
+      login(user, responseData.access_token, responseData.refresh_token);
       console.log('✅ User logged in:', user.id, '(' + user.name + ')');
       navigate('/');
     } catch (err) {

@@ -2,8 +2,6 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 
 class ActivityCreate(BaseModel):
-    id: str
-    user_id: str
     sport: str
     duration_s: float
     distance_m: float

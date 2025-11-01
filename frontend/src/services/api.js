@@ -9,6 +9,35 @@ const api = axios.create({
   },
 });
 
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle token expiration
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Token expired, redirect to login
+      localStorage.removeItem('user');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const healthAPI = {
   check: () => api.get('/health/live'),
 };
@@ -36,6 +65,13 @@ export const recommendAPI = {
     }),
   rebuildIndex: () => api.post('/recommend/rebuild'),
   getStrategies: () => api.get('/recommend/strategies'),
+};
+
+export const authAPI = {
+  login: (email, password) => api.post('/users/login', { email, password }),
+  signup: (name, email, password, location = null) => api.post('/users/signup', { name, email, password, location }),
+  refreshToken: (refreshToken) => api.post('/users/refresh', { refresh_token: refreshToken }),
+  getCurrentUser: () => api.get('/users/me'),
 };
 
 export const usersAPI = {
