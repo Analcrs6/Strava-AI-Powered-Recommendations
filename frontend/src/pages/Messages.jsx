@@ -11,7 +11,7 @@ const DUMMY_CONVERSATIONS = [
   {
     id: '1',
     user: { id: 'user_sarah_123', name: 'Sarah Johnson', avatar_color: 'bg-blue-600' },
-    lastMessage: "See you at the park! 🏃",
+    lastMessage: "See you at the park!",
     lastMessageType: 'text',
     timestamp: '2m ago',
     unread: 2
@@ -41,12 +41,12 @@ const DUMMY_MESSAGES = {
     { id: 'm2', sender_id: 'me', type: 'text', content: "Sure! Where and when?", timestamp: '10:32 AM', isOwn: true },
     { id: 'm3', sender_id: 'user_sarah_123', type: 'location', content: "Golden Gate Park", lat: 37.7694, lng: -122.4862, timestamp: '10:33 AM', isOwn: false },
     { id: 'm4', sender_id: 'me', type: 'text', content: "Perfect! What time?", timestamp: '10:34 AM', isOwn: true },
-    { id: 'm5', sender_id: 'user_sarah_123', type: 'text', content: "See you at the park! 🏃", timestamp: '2m ago', isOwn: false }
+    { id: 'm5', sender_id: 'user_sarah_123', type: 'text', content: "See you at the park!", timestamp: '2m ago', isOwn: false }
   ],
   '2': [
     { id: 'm6', sender_id: 'user_mike_456', type: 'text', content: "Check out this route I found!", timestamp: '1h ago', isOwn: false },
     { id: 'm7', sender_id: 'user_mike_456', type: 'image', content: 'https://via.placeholder.com/400x300/4CAF50/FFFFFF?text=Route+Map', filename: 'route-map.png', timestamp: '1h ago', isOwn: false },
-    { id: 'm8', sender_id: 'me', type: 'text', content: "Looks amazing! 🔥", timestamp: '55m ago', isOwn: true }
+    { id: 'm8', sender_id: 'me', type: 'text', content: "Looks amazing!", timestamp: '55m ago', isOwn: true }
   ],
   '3': [
     { id: 'm9', sender_id: 'user_emma_789', type: 'text', content: "Here's the training schedule", timestamp: '3h ago', isOwn: false },

@@ -104,7 +104,7 @@ def calculate_distance_precise(
         
         return distance_meters
     except Exception as e:
-        print(f"⚠️  Error calculating distance: {e}")
+        print(f"Error calculating distance: {e}")
         # Fallback to simple Haversine
         return _haversine_fallback(lat1, lon1, lat2, lon2)
 
@@ -148,7 +148,7 @@ def update_location(location: LocationUpdate, db: Session = Depends(get_db)):
     try:
         user = db.query(models.User).filter(models.User.id == location.user_id).first()
         if not user:
-            print(f"⚠️  User {location.user_id} not found for location update")
+            print(f"User {location.user_id} not found for location update")
             return {
                 "success": False,
                 "message": "User not found",
@@ -182,7 +182,7 @@ def update_location(location: LocationUpdate, db: Session = Depends(get_db)):
                 if not validation.is_valid:
                     validation_passed = False
                     validation_message = validation.reason
-                    print(f"⚠️  Invalid movement for {user.name}: {validation.reason}")
+                    print(f"Invalid movement for {user.name}: {validation.reason}")
                     
                     return {
                         "success": False,
@@ -195,7 +195,7 @@ def update_location(location: LocationUpdate, db: Session = Depends(get_db)):
                         }
                     }
             except Exception as e:
-                print(f"⚠️  Error validating movement: {e}")
+                print(f"Error validating movement: {e}")
                 # Continue with update if validation fails
         
         # Update user location with high precision
@@ -208,7 +208,7 @@ def update_location(location: LocationUpdate, db: Session = Depends(get_db)):
         
         db.commit()
         
-        print(f"📍 Location updated for {user.name}: ({location.latitude:.8f}, {location.longitude:.8f}) "
+        print(f"Location updated for {user.name}: ({location.latitude:.8f}, {location.longitude:.8f}) "
               f"± {location.accuracy}m from {location.source}")
         
         return {
@@ -223,7 +223,7 @@ def update_location(location: LocationUpdate, db: Session = Depends(get_db)):
         }
     except Exception as e:
         db.rollback()
-        print(f"⚠️  Error updating location: {e}")
+        print(f"Error updating location: {e}")
         return {
             "success": False,
             "message": str(e),
@@ -253,7 +253,7 @@ def get_mutual_followers_locations(
         # Get current user
         current_user = db.query(models.User).filter(models.User.id == user_id).first()
         if not current_user:
-            print(f"⚠️  User {user_id} not found for location lookup")
+            print(f"User {user_id} not found for location lookup")
             return []
         
         if not current_user.latitude or not current_user.longitude:
@@ -318,11 +318,11 @@ def get_mutual_followers_locations(
         # Sort by distance
         nearby_users.sort(key=lambda x: x.distance_meters)
         
-        print(f"📍 Found {len(nearby_users)} nearby mutual followers for {current_user.name}")
+        print(f"Found {len(nearby_users)} nearby mutual followers for {current_user.name}")
         
         return nearby_users
     except Exception as e:
-        print(f"⚠️  Error getting mutual followers locations: {e}")
+        print(f"Error getting mutual followers locations: {e}")
         return []
 
 @router.get("/proximity-check/{user_id}")
@@ -377,11 +377,11 @@ def check_proximity_notifications(
                 
                 # Create notification message
                 if distance_meters < 100:
-                    message = f"🎯 {user.name} is very close - {distance_meters:.0f}m away!"
+                    message = f"{user.name} is very close - {distance_meters:.0f}m away!"
                 elif distance_meters < 250:
-                    message = f"👋 {user.name} is nearby - {distance_meters:.0f}m away!"
+                    message = f"{user.name} is nearby - {distance_meters:.0f}m away!"
                 else:
-                    message = f"📍 {user.name} is {distance_meters:.0f}m away from you!"
+                    message = f"{user.name} is {distance_meters:.0f}m away from you!"
                 
                 notifications.append(ProximityNotification(
                     user_id=user.user_id,
@@ -409,15 +409,15 @@ def check_proximity_notifications(
                     db.add(proximity_event)
                     db.commit()
                 except Exception as e:
-                    print(f"⚠️  Error logging proximity event: {e}")
+                    print(f"Error logging proximity event: {e}")
                     db.rollback()
         
         if notifications:
-            print(f"🔔 {len(notifications)} proximity notifications for user {user_id}")
+            print(f"{len(notifications)} proximity notifications for user {user_id}")
         
         return notifications
     except Exception as e:
-        print(f"⚠️  Error checking proximity: {e}")
+        print(f"Error checking proximity: {e}")
         return []
 
 @router.post("/toggle-sharing/{user_id}")
@@ -431,7 +431,7 @@ def toggle_location_sharing(
         user = db.query(models.User).filter(models.User.id == user_id).first()
         if not user:
             # Gracefully handle non-existent user
-            print(f"⚠️  User {user_id} not found for location sharing toggle")
+            print(f"User {user_id} not found for location sharing toggle")
             return {
                 "success": False,
                 "message": "User not found",
@@ -442,7 +442,7 @@ def toggle_location_sharing(
         db.commit()
         
         status = "enabled" if enabled else "disabled"
-        print(f"📍 Location sharing {status} for {user.name}")
+        print(f"Location sharing {status} for {user.name}")
         
         return {
             "success": True,
@@ -451,7 +451,7 @@ def toggle_location_sharing(
         }
     except Exception as e:
         db.rollback()
-        print(f"⚠️  Error toggling location sharing: {e}")
+        print(f"Error toggling location sharing: {e}")
         return {
             "success": False,
             "message": str(e),

@@ -76,48 +76,48 @@ class Recommender:
         """Load pre-trained model artifacts from notebook training."""
         model_dir = Path(TRAINED_MODEL_DIR)
         
-        print(f"🔍 Checking for trained model at: {model_dir.absolute()}")
+        print(f"Checking for trained model at: {model_dir.absolute()}")
         
         if not model_dir.exists():
-            print(f"❌ Trained model directory not found at {model_dir}")
+            print(f"Trained model directory not found at {model_dir}")
             return False
         
         try:
-            print(f"📦 Loading trained model from {model_dir}...")
+            print(f"Loading trained model from {model_dir}...")
             
             # Load scaler (critical for preprocessing)
             scaler_path = model_dir / "retrieval" / "scaler.pkl"
             if not scaler_path.exists():
-                print(f"  ❌ Scaler not found at {scaler_path}")
+                print(f"  Scaler not found at {scaler_path}")
                 return False
             
             try:
                 # Try loading with default unpickler
                 with open(scaler_path, 'rb') as f:
                     self.scaler = pickle.load(f)
-                print(f"  ✅ Scaler loaded")
+                print(f"  Scaler loaded")
             except ModuleNotFoundError as e:
                 # Handle numpy version incompatibility
-                print(f"  ⚠️  Pickle compatibility issue: {e}")
-                print(f"  🔄 Creating new scaler from saved parameters...")
+                print(f"  Pickle compatibility issue: {e}")
+                print(f"  Creating new scaler from saved parameters...")
                 
                 # Create a new scaler without unpickling
                 # We'll just skip the scaler for now since embeddings are pre-computed
                 self.scaler = StandardScaler()
-                print(f"  ✅ Using fresh scaler (embeddings are pre-normalized)")
+                print(f"  Using fresh scaler (embeddings are pre-normalized)")
             
             # Load embeddings (pre-computed feature vectors)
             embeddings_path = model_dir / "retrieval" / "route_embeddings.npy"
             if not embeddings_path.exists():
-                print(f"  ❌ Embeddings not found at {embeddings_path}")
+                print(f"  Embeddings not found at {embeddings_path}")
                 return False
             embeddings = np.load(embeddings_path)
-            print(f"  ✅ Embeddings loaded: {embeddings.shape}")
+            print(f"  Embeddings loaded: {embeddings.shape}")
             
             # Load ID mapping (route_id -> index)
             id_map_path = model_dir / "retrieval" / "route_id_to_idx.json"
             if not id_map_path.exists():
-                print(f"  ❌ ID mapping not found at {id_map_path}")
+                print(f"  ID mapping not found at {id_map_path}")
                 return False
             with open(id_map_path, 'r') as f:
                 id_to_idx = json.load(f)
@@ -126,14 +126,14 @@ class Recommender:
             self.idmap = np.array([None] * len(id_to_idx), dtype=object)
             for route_id, idx in id_to_idx.items():
                 self.idmap[idx] = str(route_id)
-            print(f"  ✅ ID mapping loaded: {len(self.idmap)} routes")
+            print(f"  ID mapping loaded: {len(self.idmap)} routes")
             
             # Load modelcard (training metrics & info)
             modelcard_path = model_dir / "modelcard.json"
             if modelcard_path.exists():
                 with open(modelcard_path, 'r') as f:
                     self.modelcard = json.load(f)
-                print(f"  ✅ Model: {self.modelcard.get('model_name', 'Unknown')} v{self.modelcard.get('version', '?')}")
+                print(f"  Model: {self.modelcard.get('model_name', 'Unknown')} v{self.modelcard.get('version', '?')}")
                 print(f"      Strategy: {self.modelcard.get('best_strategy', 'content_mmr')}")
                 metrics = self.modelcard.get('evaluation_metrics', {})
                 if metrics:
@@ -142,14 +142,14 @@ class Recommender:
                     ndcg = metrics.get('ndcg_at_10', 0)
                     print(f"      Recall@10: {recall:.4f}, MAP@10: {map_score:.4f}, NDCG@10: {ndcg:.4f}")
             else:
-                print(f"  ⚠️  Modelcard not found (optional)")
+                print(f"  Modelcard not found (optional)")
             
             # Load inference config
             inference_config_path = model_dir / "inference_config.json"
             if inference_config_path.exists():
                 with open(inference_config_path, 'r') as f:
                     self.inference_config = json.load(f)
-                print(f"  ✅ Inference config loaded")
+                print(f"  Inference config loaded")
                 print(f"      Default strategy: {self.inference_config.get('default_strategy', 'content_mmr')}")
                 print(f"      Default lambda: {self.inference_config.get('default_lambda', 0.3)}")
             
@@ -158,13 +158,13 @@ class Recommender:
             if popularity_path.exists():
                 pop_df = pd.read_csv(popularity_path)
                 self.popularity_scores = dict(zip(pop_df['route_id'], pop_df['popularity_score']))
-                print(f"  ✅ Popularity scores loaded: {len(self.popularity_scores)} routes")
+                print(f"  Popularity scores loaded: {len(self.popularity_scores)} routes")
             
             # Load route metadata (for enhanced recommendations)
             route_meta_path = model_dir / "meta" / "route_meta.csv"
             if route_meta_path.exists():
                 self.route_metadata = pd.read_csv(route_meta_path)
-                print(f"  ✅ Route metadata loaded: {len(self.route_metadata)} routes")
+                print(f"  Route metadata loaded: {len(self.route_metadata)} routes")
                 print(f"      Features: surface_type, distance, elevation, difficulty, etc.")
             
             # Load user interaction data (for collaborative filtering)
@@ -176,7 +176,7 @@ class Recommender:
                     user_routes = user_seen_df[user_seen_df['user_id'] == user_id]['route_id'].tolist()
                     self.user_seen[user_id] = set(str(r) for r in user_routes)
                 
-                print(f"  ✅ User interaction data loaded: {len(self.user_seen)} users")
+                print(f"  User interaction data loaded: {len(self.user_seen)} users")
                 
                 # Build user-route interaction matrix for collaborative filtering
                 all_users = sorted(self.user_seen.keys())
@@ -199,14 +199,14 @@ class Recommender:
                 print(f"      Interaction matrix: {self.user_route_matrix.shape} (users × routes)")
                 print(f"      Total interactions: {int(self.user_route_matrix.sum())}")
             else:
-                print(f"  ⚠️  User interaction data not found (collaborative filtering disabled)")
+                print(f"  User interaction data not found (collaborative filtering disabled)")
             
             # Load feature columns
             feature_cols_path = model_dir / "retrieval" / "feature_columns.json"
             if feature_cols_path.exists():
                 with open(feature_cols_path, 'r') as f:
                     feature_columns = json.load(f)
-                print(f"  ✅ Feature columns: {feature_columns}")
+                print(f"  Feature columns: {feature_columns}")
             
             # Build FAISS index from pre-trained embeddings
             # IMPORTANT: FAISS requires float32 dtype
@@ -222,18 +222,18 @@ class Recommender:
             self.index = faiss.IndexFlatIP(dim) if settings.recsys_metric == "cosine" else faiss.IndexFlatL2(dim)
             self.index.add(X)
             
-            print(f"  ✅ FAISS index built: {self.index.ntotal} vectors, {dim} dimensions")
+            print(f"  FAISS index built: {self.index.ntotal} vectors, {dim} dimensions")
             
             # Cache to disk for faster subsequent loads
             os.makedirs(settings.recsys_index_dir, exist_ok=True)
             faiss.write_index(self.index, INDEX_PATH)
             np.save(IDMAP_PATH, self.idmap)
-            print(f"  ✅ Cached index to {settings.recsys_index_dir}")
+            print(f"  Cached index to {settings.recsys_index_dir}")
             
             return True
             
         except Exception as e:
-            print(f"❌ Failed to load trained model: {e}")
+            print(f"Failed to load trained model: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -243,16 +243,16 @@ class Recommender:
             if self.index is None:
                 # Try loading from trained model first
                 if self.load_trained_model():
-                    print("✅ Using pre-trained model from notebook")
+                    print("Using pre-trained model from notebook")
                     return
                 
                 # Fallback: try loading cached index
                 if self._load():
-                    print("✅ Using cached index")
+                    print("Using cached index")
                     return
                 
                 # Last resort: rebuild from CSV
-                print("📊 Building index from CSV...")
+                print("Building index from CSV...")
                 self.rebuild_from_csv(settings.csv_seed_path)
     
     def get_collaborative_scores(self, query_route_id: str, user_id: Optional[str] = None, k: int = 100) -> Dict[str, float]:
@@ -276,10 +276,10 @@ class Recommender:
         cache_key = collab_cache_key(query_route_id)
         cached_scores = cache.get(cache_key)
         if cached_scores is not None:
-            print(f"   📦 Cache HIT for collaborative scores: {query_route_id}")
+            print(f"   Cache HIT for collaborative scores: {query_route_id}")
             return cached_scores
         
-        print(f"   ⏱️  Cache MISS, computing collaborative scores...")
+        print(f"   Cache MISS, computing collaborative scores...")
         start_time = time.time()
         
         # Get the query route index
@@ -319,7 +319,7 @@ class Recommender:
         cache.set(cache_key, scores, ttl=1800)
         
         elapsed = time.time() - start_time
-        print(f"   ✅ Collaborative scores computed in {elapsed:.3f}s (cached for 30min)")
+        print(f"   Collaborative scores computed in {elapsed:.3f}s (cached for 30min)")
         
         return scores
 
@@ -377,7 +377,7 @@ class Recommender:
                 candidate_scores.append(float(sc))
             
             # Apply strategy
-            print(f"🎯 Applying strategy: {strategy} (lambda={lambda_diversity})")
+            print(f"Applying strategy: {strategy} (lambda={lambda_diversity})")
             print(f"   Candidate pool size: {len(candidates)} from {pool_size} requested")
             
             if strategy == "content":
@@ -413,7 +413,7 @@ class Recommender:
                 
                 if not collab_scores_dict:
                     # No collaborative data available, fall back to content-based
-                    print(f"   ⚠️  No collaborative data available, falling back to content-based")
+                    print(f"   No collaborative data available, falling back to content-based")
                     if strategy == "ensemble":
                         return list(zip(candidates[:k], candidate_scores[:k]))
                     else:
@@ -506,11 +506,11 @@ class Recommender:
                         return normalized
                     return pop_candidates[:k]
                 else:
-                    print(f"   ⚠️  No popularity scores available, falling back to similarity")
+                    print(f"   No popularity scores available, falling back to similarity")
                     return list(zip(candidates[:k], candidate_scores[:k]))
             
             # Fallback
-            print(f"   ⚠️  Fell through to fallback strategy")
+            print(f"   Fell through to fallback strategy")
             return list(zip(candidates[:k], candidate_scores[:k]))
     
     def search_by_activity_features(
@@ -547,11 +547,11 @@ class Recommender:
         from .. import models
         from sklearn.metrics.pairwise import cosine_similarity
         
-        print(f"  📊 Searching main database for similar activities...")
+        print(f"  Searching main database for similar activities...")
         print(f"     Query features: distance={distance_m}m, duration={duration_s}s, elevation={elevation_gain_m}m, hr={hr_avg}bpm")
         
         if db_session is None:
-            print(f"  ❌ No database session provided, cannot search main database")
+            print(f"  No database session provided, cannot search main database")
             return []
         
         # Query all activities from main database (exclude demo data)
@@ -559,10 +559,10 @@ class Recommender:
             models.Activity.demo_session_id == None
         ).all()
         
-        print(f"  📊 Found {len(all_activities)} activities in main database")
+        print(f"  Found {len(all_activities)} activities in main database")
         
         if len(all_activities) == 0:
-            print(f"  ⚠️  No activities in main database to compare against")
+            print(f"  No activities in main database to compare against")
             return []
         
         # Build feature matrix for all activities
@@ -586,7 +586,7 @@ class Recommender:
             activity_ids.append(activity.id)
         
         if len(activity_vectors) == 0:
-            print(f"  ⚠️  No activities left after filtering")
+            print(f"  No activities left after filtering")
             return []
         
         activity_matrix = np.array(activity_vectors)
@@ -603,7 +603,7 @@ class Recommender:
         # Take top k
         results = results[:k]
         
-        print(f"  ✅ Found {len(results)} similar activities from main database")
+        print(f"  Found {len(results)} similar activities from main database")
         if results:
             print(f"     Top result: {results[0][0]} with similarity {results[0][1]:.3f}")
         

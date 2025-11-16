@@ -85,7 +85,7 @@ function CreateActivity() {
             Track your workout in real-time with GPS mapping, live stats, and automatic distance calculation.
           </p>
           <span className="inline-block bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-semibold">
-            🎯 Recommended
+            Recommended
           </span>
         </button>
 
@@ -100,7 +100,7 @@ function CreateActivity() {
             Enter activity details manually if you already have the data or prefer not to use GPS tracking.
           </p>
           <span className="inline-block bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-semibold">
-            ⌨️ Fill form below
+            Fill form below
           </span>
         </div>
       </div>
@@ -129,11 +129,11 @@ function CreateActivity() {
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-strava-orange focus:border-transparent"
             >
-              <option value="running">🏃 Running</option>
-              <option value="cycling">🚴 Cycling</option>
-              <option value="swimming">🏊 Swimming</option>
-              <option value="hiking">🥾 Hiking</option>
-              <option value="walking">🚶 Walking</option>
+              <option value="running">Running</option>
+              <option value="cycling">Cycling</option>
+              <option value="swimming">Swimming</option>
+              <option value="hiking">Hiking</option>
+              <option value="walking">Walking</option>
             </select>
           </div>
 

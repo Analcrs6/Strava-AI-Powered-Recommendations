@@ -51,7 +51,7 @@ def recommend(req: RecommendRequest, db: Session = Depends(get_db)):
         if "_demo_" in req.activity_id:
             parts = req.activity_id.split("_demo_")
             activity_id_for_search = parts[0]
-            print(f"🔍 Demo activity detected: {req.activity_id} → {activity_id_for_search}")
+            print(f"Demo activity detected: {req.activity_id} → {activity_id_for_search}")
         
         # Extract just the route ID (the FAISS index uses route IDs without user prefix)
         # Format: "userid_R049" → "R049"
@@ -61,12 +61,12 @@ def recommend(req: RecommendRequest, db: Session = Depends(get_db)):
             for part in id_parts:
                 if part.startswith("R") or part.isdigit():
                     route_id = part
-                    print(f"🔍 Extracted route ID: {activity_id_for_search} → {route_id}")
+                    print(f"Extracted route ID: {activity_id_for_search} → {route_id}")
                     activity_id_for_search = route_id
                     break
         
-        print(f"🔍 Final search ID: {activity_id_for_search}")
-        print(f"⚙️  Strategy: {req.strategy}, Lambda: {req.lambda_diversity}, K: {req.k}")
+        print(f"Final search ID: {activity_id_for_search}")
+        print(f"Strategy: {req.strategy}, Lambda: {req.lambda_diversity}, K: {req.k}")
         
         # Debug: Check if activity exists in FAISS index
         recsys.ensure_ready()
@@ -74,22 +74,22 @@ def recommend(req: RecommendRequest, db: Session = Depends(get_db)):
         if recsys.idmap is not None:
             import numpy as np
             if activity_id_for_search in recsys.idmap:
-                print(f"✅ Activity found in FAISS index")
+                print(f"Activity found in FAISS index")
                 activity_in_index = True
             else:
-                print(f"❌ Activity NOT found in FAISS index")
+                print(f"Activity NOT found in FAISS index")
                 print(f"   Available IDs sample (first 10): {list(recsys.idmap[:min(10, len(recsys.idmap))])}")
                 print(f"   Total routes in index: {len(recsys.idmap)}")
         
         # If activity not in index, try to search by features (for real user activities)
         if not activity_in_index:
-            print(f"🔍 Activity not in index, searching for it in main database...")
+            print(f"Activity not in index, searching for it in main database...")
             activity = db.query(models.Activity).filter(
                 models.Activity.id == req.activity_id
             ).first()
             
             if activity:
-                print(f"✅ Found activity in database: {activity.id}")
+                print(f"Found activity in database: {activity.id}")
                 print(f"   Features: distance={activity.distance_m}m, duration={activity.duration_s}s, elevation={activity.elevation_gain_m}m, hr={activity.hr_avg}bpm")
                 
                 # Extract features and compute recommendations using feature vector
@@ -105,9 +105,9 @@ def recommend(req: RecommendRequest, db: Session = Depends(get_db)):
                     db_session=db,
                     exclude_activity_id=activity.id
                 )
-                print(f"📊 Found {len(items)} recommendations using feature-based search")
+                print(f"Found {len(items)} recommendations using feature-based search")
             else:
-                print(f"❌ Activity not found in main database either")
+                print(f"Activity not found in main database either")
                 raise HTTPException(404, f"Activity {req.activity_id} not found in index or database")
         else:
             # Activity in index, use normal search
@@ -118,16 +118,16 @@ def recommend(req: RecommendRequest, db: Session = Depends(get_db)):
                 lambda_diversity=req.lambda_diversity
             )
         
-        print(f"📊 Returned {len(items)} items using strategy: {req.strategy}")
+        print(f"Returned {len(items)} items using strategy: {req.strategy}")
         
         if not items:
-            print(f"⚠️  No recommendations returned for {activity_id_for_search}")
+            print(f"No recommendations returned for {activity_id_for_search}")
         else:
-            print(f"✅ Found {len(items)} recommendations")
+            print(f"Found {len(items)} recommendations")
             
     except Exception as e:
         import traceback
-        print(f"❌ Recommendation error: {str(e)}")
+        print(f"Recommendation error: {str(e)}")
         traceback.print_exc()
         raise HTTPException(500, f"Recommendation failed: {str(e)}")
     
@@ -163,7 +163,7 @@ def recommend(req: RecommendRequest, db: Session = Depends(get_db)):
                 else:
                     seen_routes.add(act_id)
             
-            print(f"🚫 Filtering {len(seen_routes)} seen routes for user {req.user_id}")
+            print(f"Filtering {len(seen_routes)} seen routes for user {req.user_id}")
             
             # Filter recommendations
             filtered_items = [(aid, score) for aid, score in items if aid not in seen_routes]
@@ -171,7 +171,7 @@ def recommend(req: RecommendRequest, db: Session = Depends(get_db)):
             if len(filtered_items) < len(items):
                 print(f"   Filtered: {len(items)} → {len(filtered_items)} recommendations")
         except Exception as e:
-            print(f"⚠️  Error filtering seen routes: {e}")
+            print(f"Error filtering seen routes: {e}")
             # Continue with unfiltered results
     
     # Enrich items with route metadata
@@ -274,7 +274,7 @@ def recommend_next_activity(
         
         if not user_activities:
             # No history - return popular routes
-            print(f"🔍 No activity history for user {user_id}, returning popular routes")
+            print(f"No activity history for user {user_id}, returning popular routes")
             return recommend(RecommendRequest(
                 activity_id=None,
                 top_k=top_k,
@@ -286,7 +286,7 @@ def recommend_next_activity(
         
         # Get the most recent activity
         last_activity = user_activities[0]
-        print(f"🎯 Predicting next activity based on last activity: {last_activity.id}")
+        print(f"Predicting next activity based on last activity: {last_activity.id}")
         
         # Calculate average stats from user history to understand their patterns
         avg_distance = sum(a.distance_m for a in user_activities) / len(user_activities)
@@ -299,7 +299,7 @@ def recommend_next_activity(
             sport_counts[sport] = sport_counts.get(sport, 0) + 1
         preferred_sport = max(sport_counts, key=sport_counts.get)
         
-        print(f"📊 User patterns: avg_distance={avg_distance:.0f}m, avg_elevation={avg_elevation:.0f}m, preferred_sport={preferred_sport}")
+        print(f"User patterns: avg_distance={avg_distance:.0f}m, avg_elevation={avg_elevation:.0f}m, preferred_sport={preferred_sport}")
         
         # Get recommendations based on last activity but filter to similar difficulty/length
         recommendations = recommend(RecommendRequest(
@@ -330,7 +330,7 @@ def recommend_next_activity(
         # Take top K
         final_recs = filtered_recs[:top_k]
         
-        print(f"✅ Returning {len(final_recs)} next activity recommendations")
+        print(f"Returning {len(final_recs)} next activity recommendations")
         
         return RecommendResponse(
             items=final_recs,
@@ -348,7 +348,7 @@ def recommend_next_activity(
         )
         
     except Exception as e:
-        print(f"❌ Error in next activity recommendation: {e}")
+        print(f"Error in next activity recommendation: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(500, f"Failed to generate next activity recommendations: {str(e)}")

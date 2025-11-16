@@ -2,32 +2,32 @@
 
 Modern React UI for the Strava Clone with AI-powered activity recommendations and professional GPS tracking.
 
-## ✨ Features
+## Features
 
 ### Core Features
-- 🏃 **Activity Dashboard** - Real-time stats and feed
-- ➕ **Create Activities** - Manual or GPS-recorded
-- 🤖 **AI Recommendations** - FAISS-powered smart suggestions
-- 📊 **Analytics** - Beautiful metrics and charts
-- 🎨 **Strava Design** - Professional, clean interface
-- 📱 **Fully Responsive** - Works on all devices
+- **Activity Dashboard** - Real-time stats and feed
+- **Create Activities** - Manual or GPS-recorded
+- **AI Recommendations** - FAISS-powered smart suggestions
+- **Analytics** - Beautiful metrics and charts
+- **Strava Design** - Professional, clean interface
+- **Fully Responsive** - Works on all devices
 
 ### GPS & Location Features  
-- 📍 **Activity Recording** - Strava-level GPS tracking with Kalman filtering
-- 🗺️ **Route Visualization** - Real-time orange route lines like Strava
-- 🎬 **Demo Mode** - 5km run simulation with realistic GPS movement
-- 👥 **Nearby Friends** - See mutual followers on live map
-- 🔔 **Proximity Alerts** - Get notified when friends are within 500m
-- 🛰️ **GPS Quality** - Real-time accuracy indicators and signal strength
+- **Activity Recording** - Strava-level GPS tracking with Kalman filtering
+- **Route Visualization** - Real-time orange route lines like Strava
+- **Demo Mode** - 5km run simulation with realistic GPS movement
+- **Nearby Friends** - See mutual followers on live map
+- **Proximity Alerts** - Get notified when friends are within 500m
+- **GPS Quality** - Real-time accuracy indicators and signal strength
 
 ### Advanced Features
-- 🔐 **JWT Authentication** - Secure login with refresh tokens
-- 🔔 **Real-time Notifications** - WebSocket updates
-- 📤 **Activity Export** - GPX, TCX, JSON formats
-- 🎯 **A/B Testing UI** - Compare recommendation strategies
-- ⚙️ **User Preferences** - Customizable settings
+- **JWT Authentication** - Secure login with refresh tokens
+- **Real-time Notifications** - WebSocket updates
+- **Activity Export** - GPX, TCX, JSON formats
+- **A/B Testing UI** - Compare recommendation strategies
+- **User Preferences** - Customizable settings
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **React 18** - UI library with hooks
 - **Vite** - Lightning-fast build tool & dev server
@@ -62,7 +62,7 @@ The app will be available at http://localhost:3000
 npm run build
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 frontend/
@@ -77,16 +77,16 @@ frontend/
 │   ├── pages/                   # Page components
 │   │   ├── Dashboard.jsx                # Main activity feed
 │   │   ├── CreateActivity.jsx           # Manual activity creation
-│   │   ├── RecordActivity.jsx           # 🆕 GPS Recording with Demo Mode
+│   │   ├── RecordActivity.jsx           # GPS Recording with Demo Mode
 │   │   ├── ActivityDetail.jsx           # Activity view
-│   │   ├── NearbyFollowers.jsx          # 🆕 Location sharing & nearby friends
+│   │   ├── NearbyFollowers.jsx          # Location sharing & nearby friends
 │   │   ├── Demo.jsx                     # Demo/testing page
 │   │   ├── Login.jsx / Signup.jsx       # Authentication
 │   │   ├── Settings.jsx                 # User preferences
 │   │   └── Notifications.jsx            # Real-time notifications
 │   ├── services/                # API & Services
 │   │   ├── api.js                       # API client
-│   │   └── PrecisionLocationService.js  # 🆕 GPS tracking with Kalman filter
+│   │   └── PrecisionLocationService.js  # GPS tracking with Kalman filter
 │   ├── contexts/                # React contexts
 │   │   └── AuthContext.jsx              # Auth state management
 │   ├── utils/                   # Utility functions
@@ -100,7 +100,7 @@ frontend/
 └── .env                         # Environment variables (create this)
 ```
 
-## 🔌 API Integration
+## API Integration
 
 The frontend connects to the FastAPI backend at `http://localhost:8000` through Vite's proxy configuration.
 
@@ -161,11 +161,11 @@ For the Record Activity page with professional GPS tracking, you'll need a Mapbo
    ```
 3. **Restart the dev server** after adding the token
 
-📖 **Full setup guide**: See [MAPBOX_SETUP.md](./MAPBOX_SETUP.md)
+**Full setup guide**: See [MAPBOX_SETUP.md](./MAPBOX_SETUP.md)
 
 **Note**: The app will work without a token (uses basic OpenStreetMap fallback), but you'll get better map features with Mapbox!
 
-## 📍 GPS Activity Recording
+## GPS Activity Recording
 
 ### Features
 The Record Activity page provides professional-grade GPS tracking:
@@ -191,7 +191,7 @@ The Record Activity page provides professional-grade GPS tracking:
 - **Auto-Follow** - Map smoothly pans to follow you
 - **Start/Current Markers** - Green start, orange current position
 
-### Demo Mode 🎬
+### Demo Mode
 
 Can't test outdoors? Use the built-in 5km Run Simulation:
 
@@ -228,7 +228,7 @@ Can't test outdoors? Use the built-in 5km Run Simulation:
 - Testing: Accepts up to 50km for indoor/network positioning
 - Configurable per environment
 
-## 🗺️ Nearby Friends Feature
+## Nearby Friends Feature
 
 ### Location Sharing
 Real-time location tracking for mutual followers:
@@ -256,7 +256,7 @@ Shows "Demo Data" badge when using samples.
 - Direct messaging
 - Profile viewing
 
-## 🎨 Design System
+## Design System
 
 The UI follows Strava's design language with:
 
@@ -274,7 +274,7 @@ The UI follows Strava's design language with:
 - Smooth animations and transitions
 - Professional typography (Inter font)
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### GPS Issues
 
@@ -310,7 +310,7 @@ The UI follows Strava's design language with:
 - Check "Demo Data" badge
 - Console shows "keeping demo data" if API fails
 
-## 🧪 Testing
+## Testing
 
 ### Test GPS Recording
 ```bash
@@ -341,7 +341,7 @@ The UI follows Strava's design language with:
 - Can still interact with demo users
 ```
 
-## 🚀 Performance
+## Performance
 
 **Optimizations:**
 - Lazy loading for routes
@@ -355,7 +355,7 @@ The UI follows Strava's design language with:
 - Mapbox GL: ~200KB (loaded on demand)
 - Total initial load: <500KB
 
-## 📱 Browser Support
+## Browser Support
 
 **Full Support:**
 - Chrome/Edge 90+ (Best GPS experience)

@@ -185,7 +185,7 @@ function RecommendationsPanel({ selectedActivity }) {
       {recommendMode === 'next' && user && (
         <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
           <p className="text-sm text-green-800 font-medium">
-            🎯 Personalized Predictions for {user.name || 'You'}
+            Personalized Predictions for {user.name || 'You'}
           </p>
           <p className="text-xs text-green-600 mt-1">
             Based on your activity history and patterns

@@ -1,4 +1,4 @@
-# Strava Recommender System V2.0 🏃‍♂️🎯
+# Strava Recommender System V2.0
 
 A production-ready, full-stack activity recommendation platform with advanced ML algorithms, JWT authentication, A/B testing, real-time features, and comprehensive analytics.
 
@@ -7,28 +7,28 @@ A production-ready, full-stack activity recommendation platform with advanced ML
 [![FAISS](https://img.shields.io/badge/FAISS-Vector%20Search-blue)](https://github.com/facebookresearch/faiss)
 [![Redis](https://img.shields.io/badge/Redis-Caching-red)](https://redis.io/)
 
-## 🌟 What Makes This Special
+## What Makes This Special
 
 This isn't just another Strava clone - it's an **enterprise-grade recommendation system** with:
 
-- ✅ **5 ML Strategies** - Content, Content+MMR, Ensemble, Ensemble+MMR, Popularity
-- ✅ **JWT Authentication** - Secure access & refresh tokens
-- ✅ **A/B Testing Built-In** - Compare strategies with real data
-- ✅ **Redis Caching** - 100x performance improvement
-- ✅ **Real-time Notifications** - WebSocket-powered updates
-- ✅ **Analytics Dashboard** - Track clicks, completions, performance
-- ✅ **Activity Export** - GPX, TCX, JSON formats
-- ✅ **Email Verification** - Complete auth flow
-- ✅ **Rate Limiting** - 100 requests/minute protection
-- ✅ **User Preferences** - Personalized algorithm settings
-- ✅ **GPS Activity Recording** - Strava-level precision tracking
-- ✅ **Demo Mode** - 5km run simulation with realistic routes
-- ✅ **Nearby Friends** - Real-time location sharing
-- ✅ **Professional Maps** - Mapbox GL with route visualization
+- **5 ML Strategies** - Content, Content+MMR, Ensemble, Ensemble+MMR, Popularity
+- **JWT Authentication** - Secure access & refresh tokens
+- **A/B Testing Built-In** - Compare strategies with real data
+- **Redis Caching** - 100x performance improvement
+- **Real-time Notifications** - WebSocket-powered updates
+- **Analytics Dashboard** - Track clicks, completions, performance
+- **Activity Export** - GPX, TCX, JSON formats
+- **Email Verification** - Complete auth flow
+- **Rate Limiting** - 100 requests/minute protection
+- **User Preferences** - Personalized algorithm settings
+- **GPS Activity Recording** - Strava-level precision tracking
+- **Demo Mode** - 5km run simulation with realistic routes
+- **Nearby Friends** - Real-time location sharing
+- **Professional Maps** - Mapbox GL with route visualization
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Docker & Docker Compose
@@ -65,9 +65,9 @@ make build && make up
 
 ---
 
-## 📦 Core Features
+## Core Features
 
-### 🔐 Authentication & Security
+### Authentication & Security
 
 #### JWT Authentication
 - **Access tokens** (30 min expiry)
@@ -114,7 +114,7 @@ Authorization: Bearer eyJ...
 
 ---
 
-### 🤖 Advanced Recommendation System
+### Advanced Recommendation System
 
 #### 5 Available Strategies
 
@@ -153,7 +153,7 @@ POST /api/recommend
 
 ---
 
-### 📊 A/B Testing Framework
+### A/B Testing Framework
 
 #### Automatic Testing
 - **Users auto-assigned** to Group A or B on signup
@@ -186,7 +186,7 @@ GET /api/analytics/ab-test-results?experiment=ensemble_vs_content_mmr&days=7
 
 ---
 
-### ⚡ Redis Caching System
+### Redis Caching System
 
 #### What's Cached
 - **Collaborative filtering scores** (30 min TTL)
@@ -215,7 +215,7 @@ docker run -d -p 6379:6379 redis:latest
 
 ---
 
-### 📈 Analytics & Tracking
+### Analytics & Tracking
 
 #### Track User Behavior
 ```bash
@@ -247,7 +247,7 @@ GET /api/analytics/ab-test-results
 
 ---
 
-### 🎯 User Preferences
+### User Preferences
 
 #### Customizable Settings
 - **Preferred strategy** (saved per user)
@@ -272,7 +272,7 @@ PATCH /api/users/me/preferences
 
 ---
 
-### 📤 Activity Export
+### Activity Export
 
 #### Supported Formats
 
@@ -297,7 +297,7 @@ GET /api/export/activity/{id}/json
 
 ---
 
-### 🔔 Real-time Notifications
+### Real-time Notifications
 
 #### WebSocket Connection
 ```javascript
@@ -318,20 +318,20 @@ ws.onmessage = (event) => {
 
 ---
 
-### 📍 GPS Activity Recording (Strava-Level)
+### GPS Activity Recording (Strava-Level)
 
 #### Professional GPS Tracking
 Our Record Activity page features enterprise-grade GPS tracking similar to Strava:
 
 **Features:**
-- ✅ **Permission Flow** - Native browser location permission prompts
-- ✅ **High Accuracy GPS** - Uses device GPS with Kalman filtering
-- ✅ **Network Fallback** - Falls back to WiFi/network positioning
-- ✅ **Real-time Route Drawing** - Orange Strava-style route line
-- ✅ **Live Stats** - Distance, pace, speed, elevation gain
-- ✅ **GPS Quality Indicators** - Accuracy badges and signal quality
-- ✅ **Auto-Follow Map** - Map pans to follow your position
-- ✅ **Route Smoothing** - Douglas-Peucker algorithm for optimization
+- **Permission Flow** - Native browser location permission prompts
+- **High Accuracy GPS** - Uses device GPS with Kalman filtering
+- **Network Fallback** - Falls back to WiFi/network positioning
+- **Real-time Route Drawing** - Orange Strava-style route line
+- **Live Stats** - Distance, pace, speed, elevation gain
+- **GPS Quality Indicators** - Accuracy badges and signal quality
+- **Auto-Follow Map** - Map pans to follow your position
+- **Route Smoothing** - Douglas-Peucker algorithm for optimization
 
 **Demo Mode:**
 Can't go outside? Try our **5km Run Simulation**:
@@ -360,19 +360,19 @@ Can't go outside? Try our **5km Run Simulation**:
 
 ---
 
-### 🗺️ Nearby Friends & Location Sharing
+### Nearby Friends & Location Sharing
 
 #### Real-time Location Features
 See mutual followers near you with live location tracking:
 
 **Features:**
-- ✅ **Mutual Followers Only** - Privacy-focused (only friends who follow you back)
-- ✅ **Proximity Alerts** - Get notified when friends are within 500m
-- ✅ **Live Map View** - Interactive map with user markers
-- ✅ **Distance Display** - Real-time distance calculations
-- ✅ **Activity Status** - See what friends are currently doing
-- ✅ **Demo Data** - Built-in sample users for testing
-- ✅ **Permission Control** - Easy toggle for location sharing
+- **Mutual Followers Only** - Privacy-focused (only friends who follow you back)
+- **Proximity Alerts** - Get notified when friends are within 500m
+- **Live Map View** - Interactive map with user markers
+- **Distance Display** - Real-time distance calculations
+- **Activity Status** - See what friends are currently doing
+- **Demo Data** - Built-in sample users for testing
+- **Permission Control** - Easy toggle for location sharing
 
 **Demo Data Preserved:**
 The Nearby page includes 4 demo users that persist even when location sharing is enabled:
@@ -389,7 +389,7 @@ The Nearby page includes 4 demo users that persist even when location sharing is
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -421,7 +421,7 @@ The Nearby page includes 4 demo users that persist even when location sharing is
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 - **React 18** - UI framework
@@ -455,7 +455,7 @@ The Nearby page includes 4 demo users that persist even when location sharing is
 
 ---
 
-## 📚 API Documentation
+## API Documentation
 
 ### Authentication Endpoints
 ```
@@ -515,7 +515,7 @@ POST   /api/location/toggle           # Toggle location sharing
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ### Run Tests
 ```bash
@@ -553,7 +553,7 @@ curl -X POST http://localhost:8000/api/recommend \
 
 ---
 
-## 📊 Performance Benchmarks
+## Performance Benchmarks
 
 | Operation | Time (without cache) | Time (with cache) | Improvement |
 |-----------|---------------------|-------------------|-------------|
@@ -567,7 +567,7 @@ curl -X POST http://localhost:8000/api/recommend \
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Redis Connection Failed
 ```bash
@@ -679,7 +679,7 @@ Solution:
 
 ---
 
-## 🔧 Development
+## Development
 
 ### Backend Development
 ```bash
@@ -706,7 +706,7 @@ alembic upgrade head
 
 ---
 
-## 🚢 Deployment
+## Deployment
 
 ### Docker Production
 ```bash
@@ -729,7 +729,7 @@ FRONTEND_URL=https://yourdomain.com
 
 ---
 
-## 📈 Monitoring
+## Monitoring
 
 ### Logs
 ```bash
@@ -751,29 +751,29 @@ docker-compose logs -f frontend
 
 ---
 
-## 🎓 Learning Outcomes
+## Learning Outcomes
 
 This project demonstrates:
-- ✅ Production-ready FastAPI architecture
-- ✅ JWT authentication & authorization
-- ✅ Advanced ML recommendation systems
-- ✅ A/B testing & experimentation
-- ✅ Caching strategies for performance
-- ✅ Rate limiting & security best practices
-- ✅ Real-time features with WebSockets
-- ✅ Analytics & data tracking
-- ✅ Microservices architecture
-- ✅ RESTful API design
+- Production-ready FastAPI architecture
+- JWT authentication & authorization
+- Advanced ML recommendation systems
+- A/B testing & experimentation
+- Caching strategies for performance
+- Rate limiting & security best practices
+- Real-time features with WebSockets
+- Analytics & data tracking
+- Microservices architecture
+- RESTful API design
 
 ---
 
-## 📝 License
+## License
 
 MIT License - Feel free to use and modify!
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **FAISS** by Facebook AI Research
 - **FastAPI** by Sebastián Ramírez
@@ -782,7 +782,7 @@ MIT License - Feel free to use and modify!
 
 ---
 
-## 📞 Support
+## Support
 
 - **Documentation**: Check `/docs` folder
 - **API Docs**: http://localhost:8000/docs
@@ -791,7 +791,7 @@ MIT License - Feel free to use and modify!
 
 ---
 
-**Built with ❤️ using FastAPI, React, FAISS, and Redis**
+**Built with FastAPI, React, FAISS, and Redis**
 
 **Version 2.0.0** - Production Ready
 

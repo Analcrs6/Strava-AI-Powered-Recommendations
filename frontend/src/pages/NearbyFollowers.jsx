@@ -160,7 +160,7 @@ function NearbyFollowers() {
         location.longitude,
         locationEnabled
       );
-      console.log('📍 Location updated on server');
+      console.log('Location updated on server');
     } catch (error) {
       console.error('Error updating location:', error);
     }
@@ -179,13 +179,13 @@ function NearbyFollowers() {
         setNearbyUsers(serverData);
       } else {
         // Keep dummy data if no real data available
-        console.log('📍 No nearby followers from server, keeping demo data');
+        console.log('No nearby followers from server, keeping demo data');
         // Don't clear dummy data - keep it for demonstration
       }
     } catch (error) {
       console.error('Error loading nearby followers:', error);
       // On error, keep the dummy data for demonstration
-      console.log('📍 API error, keeping demo data');
+      console.log('API error, keeping demo data');
     } finally {
       setLoading(false);
     }
@@ -211,12 +211,12 @@ function NearbyFollowers() {
         setProximityAlerts(alerts);
       } else {
         // Keep dummy alerts for demonstration
-        console.log('📍 No proximity alerts from server, keeping demo data');
+        console.log('No proximity alerts from server, keeping demo data');
       }
     } catch (error) {
       console.error('Error checking proximity:', error);
       // Keep dummy alerts on error
-      console.log('📍 API error, keeping demo alerts');
+      console.log('API error, keeping demo alerts');
     }
   };
 
@@ -253,7 +253,7 @@ function NearbyFollowers() {
       localStorage.setItem('location_sharing_enabled', newEnabled.toString());
       
       await locationAPI.toggleLocationSharing(user.id, newEnabled);
-      console.log(`📍 Location sharing ${newEnabled ? 'enabled' : 'disabled'} for ${user.id}`);
+      console.log(`Location sharing ${newEnabled ? 'enabled' : 'disabled'} for ${user.id}`);
     } catch (error) {
       console.error('Error toggling location sharing:', error);
       setError('Failed to toggle location sharing');

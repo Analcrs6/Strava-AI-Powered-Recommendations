@@ -167,12 +167,12 @@ function RecordActivity() {
 
       // Stop any existing tracking before starting new one
       if (locationService.isTracking) {
-        console.log('🔄 Stopping existing tracking before restarting...');
+        console.log('Stopping existing tracking before restarting...');
         locationService.stopTracking();
         locationService.reset();
       }
 
-      console.log('🎯 Requesting location permission...');
+      console.log('Requesting location permission...');
       
       // Request permission by attempting to get location
       // For development/testing: Accept lower accuracy for indoor testing
@@ -185,15 +185,15 @@ function RecordActivity() {
         updateThrottle: 1000,
       });
 
-      console.log('✅ Location permission granted, GPS tracking started');
+      console.log('Location permission granted, GPS tracking started');
       setLocationPermission('granted');
       setShowPermissionModal(false);
       setGpsError(null);
 
       // Subscribe to location updates
-      console.log('🔔 Setting up location subscription...');
+      console.log('Setting up location subscription...');
       const unsubscribe = locationService.subscribe((position) => {
-        console.log('📍 RecordActivity received location update:', {
+        console.log('RecordActivity received location update:', {
           lat: position.latitude.toFixed(6),
           lon: position.longitude.toFixed(6),
           accuracy: position.accuracy.toFixed(1) + 'm',
@@ -201,7 +201,7 @@ function RecordActivity() {
         });
         
         const location = [position.latitude, position.longitude];
-        console.log('🗺️ Updating state with location:', location);
+        console.log('Updating state with location:', location);
         
         setCurrentLocation(location);
         setMapCenter(location);
@@ -212,32 +212,32 @@ function RecordActivity() {
         // Calculate GPS quality
         const quality = locationService.getGPSQuality();
         setGpsQuality(quality);
-        console.log('📊 GPS Quality:', quality + '%');
+        console.log('GPS Quality:', quality + '%');
 
         // Update current speed if available
         if (position.calculatedSpeed !== undefined) {
           setCurrentSpeed(position.calculatedSpeed);
         }
 
-        console.log(`✅ Location state updated successfully`);
+        console.log(`Location state updated successfully`);
       });
       
-      console.log('✅ Location subscription setup complete');
+      console.log('Location subscription setup complete');
 
       // Subscribe to errors
-      console.log('🔔 Setting up error subscription...');
+      console.log('Setting up error subscription...');
       const unsubscribeErrors = locationService.subscribeToErrors((error) => {
-        console.error('❌ RecordActivity received GPS error:', error);
+        console.error('RecordActivity received GPS error:', error);
         setGpsError(error.message);
       });
-      console.log('✅ Error subscription setup complete');
+      console.log('Error subscription setup complete');
 
       // Store unsubscribe functions
       locationServiceRef.current.unsubscribe = unsubscribe;
       locationServiceRef.current.unsubscribeErrors = unsubscribeErrors;
 
     } catch (error) {
-      console.error('❌ Location permission denied or error:', error);
+      console.error('Location permission denied or error:', error);
       
       if (error.message?.includes('denied') || error.code === 1) {
         setLocationPermission('denied');
@@ -327,18 +327,18 @@ function RecordActivity() {
       
       // Safety check to prevent infinite loop
       if (points.length > 2000) {
-        console.warn('⚠️ Max points reached, stopping route generation');
+        console.warn('Max points reached, stopping route generation');
         break;
       }
     }
     
-    console.log(`📏 Generated route: ${points.length} points, ${(totalDistance/1000).toFixed(2)}km`);
+    console.log(`Generated route: ${points.length} points, ${(totalDistance/1000).toFixed(2)}km`);
     return points;
   };
 
   // Start demo mode
   const startDemoMode = () => {
-    console.log('🎬 Starting demo mode - simulating 5km run');
+    console.log('Starting demo mode - simulating 5km run');
     
     setIsDemoMode(true);
     setShowPermissionModal(false);
@@ -356,7 +356,7 @@ function RecordActivity() {
     setGpsQuality(95);
     setLocationSource('gps');
     
-    console.log(`📍 Generated demo route with ${demoRoute.length} points`);
+    console.log(`Generated demo route with ${demoRoute.length} points`);
     
     // Start recording immediately
     setIsRecording(true);
@@ -375,7 +375,7 @@ function RecordActivity() {
       if (stepIndex >= demoRoute.length) {
         // Finished the route
         clearInterval(demoIntervalRef.current);
-        console.log('✅ Demo run completed - Total points:', demoRoute.length);
+        console.log('Demo run completed - Total points:', demoRoute.length);
         setIsRecording(false);
         setIsPaused(false);
         return;
@@ -386,7 +386,7 @@ function RecordActivity() {
       
       // Log progress every 50 points
       if (stepIndex % 50 === 0) {
-        console.log(`🏃 Demo progress: ${stepIndex}/${demoRoute.length} points (${((stepIndex/demoRoute.length)*100).toFixed(1)}%)`);
+        console.log(`Demo progress: ${stepIndex}/${demoRoute.length} points (${((stepIndex/demoRoute.length)*100).toFixed(1)}%)`);
       }
       
       // Update location
@@ -460,7 +460,7 @@ function RecordActivity() {
       const timestamp = position.timestamp;
       const altitude = position.altitude;
 
-      console.log(`📝 Recording point - accuracy: ${accuracy.toFixed(1)}m, source: ${position.source}`);
+      console.log(`Recording point - accuracy: ${accuracy.toFixed(1)}m, source: ${position.source}`);
 
       // Only accept points with reasonable accuracy (filtered by service)
       if (accuracy < 100) {
@@ -550,10 +550,10 @@ function RecordActivity() {
       if (source) {
         // Update existing source data (much more efficient - no flicker)
         source.setData(geojsonData);
-        console.log(`🗺️ Updated route on map: ${route.length} points`);
+        console.log(`Updated route on map: ${route.length} points`);
       } else {
         // Create source and layer for the first time
-        console.log('🗺️ Creating route layer for the first time');
+        console.log('Creating route layer for the first time');
         
         map.addSource(routeSourceId, {
           type: 'geojson',
@@ -606,25 +606,25 @@ function RecordActivity() {
         });
       }
     } catch (error) {
-      console.error('❌ Error updating route on map:', error);
+      console.error('Error updating route on map:', error);
     }
   };
 
   const handleMapLoad = useCallback((map) => {
-    console.log('🗺️ Map loaded');
+    console.log('Map loaded');
     mapRef.current = map;
   }, []);
 
   const handleStart = () => {
     if (!currentLocation) {
-      alert('⏳ Waiting for GPS signal. Please ensure location services are enabled.');
+      alert('Waiting for GPS signal. Please ensure location services are enabled.');
       return;
     }
 
     // Warn if GPS accuracy is very poor (network positioning)
     if (gpsAccuracy && gpsAccuracy > 1000) {
       const proceed = window.confirm(
-        `⚠️ WARNING: Very Poor Location Accuracy!\n\n` +
+        `WARNING: Very Poor Location Accuracy!\n\n` +
         `Current accuracy: ${(gpsAccuracy/1000).toFixed(1)}km (${Math.round(gpsAccuracy)}m)\n` +
         `This is network/WiFi positioning, NOT GPS!\n\n` +
         `Recorded route will be VERY INACCURATE.\n\n` +
@@ -639,7 +639,7 @@ function RecordActivity() {
     // Warn if GPS accuracy is poor but acceptable
     else if (gpsAccuracy && gpsAccuracy > 30) {
       const proceed = window.confirm(
-        `⚠️ GPS accuracy is ${Math.round(gpsAccuracy)}m\n\n` +
+        `GPS accuracy is ${Math.round(gpsAccuracy)}m\n\n` +
         `For best results:\n` +
         `• Move to an open outdoor area\n` +
         `• Ensure clear view of the sky\n` +
@@ -649,7 +649,7 @@ function RecordActivity() {
       if (!proceed) return;
     }
 
-    console.log('🎬 Starting activity recording');
+    console.log('Starting activity recording');
     setIsRecording(true);
     setIsPaused(false);
     setRoute([currentLocation]);
@@ -664,7 +664,7 @@ function RecordActivity() {
 
   const handlePause = () => {
     setIsPaused(!isPaused);
-    console.log(isPaused ? '▶️ Resuming' : '⏸️ Paused');
+    console.log(isPaused ? 'Resuming' : 'Paused');
     
     // Pause/resume demo mode
     if (isDemoMode) {
@@ -676,13 +676,13 @@ function RecordActivity() {
       } else {
         // Resuming - restart demo interval
         // This is a simplified resume - in production you'd track the step index
-        console.log('▶️ Resuming demo simulation');
+        console.log('Resuming demo simulation');
       }
     }
   };
 
   const handleStop = () => {
-    console.log('⏹️ Stopping recording');
+    console.log('Stopping recording');
     setIsRecording(false);
     setIsPaused(false);
 
@@ -695,7 +695,7 @@ function RecordActivity() {
     if (route.length > 2) {
       const simplified = simplifyRoute(route, 0.00001);
       setSmoothedRoute(simplified);
-      console.log(`📊 Route simplified: ${route.length} → ${simplified.length} points`);
+      console.log(`Route simplified: ${route.length} → ${simplified.length} points`);
     }
   };
 
@@ -753,11 +753,11 @@ function RecordActivity() {
       };
 
       await activitiesAPI.create(activityData);
-      console.log('✅ Activity saved successfully');
-      alert('🎉 Activity saved successfully!');
+      console.log('Activity saved successfully');
+      alert('Activity saved successfully!');
       navigate('/');
     } catch (error) {
-      console.error('❌ Error saving activity:', error);
+      console.error('Error saving activity:', error);
       alert('Failed to save activity. Please try again.');
     } finally {
       setSaving(false);
@@ -814,7 +814,7 @@ function RecordActivity() {
 
   // Debug logging for map data
   useEffect(() => {
-    console.log('🗺️ Map data updated:', {
+    console.log('Map data updated:', {
       hasCurrentLocation: !!currentLocation,
       currentLocation: currentLocation,
       mapCenter: mapCenter,
@@ -921,7 +921,7 @@ function RecordActivity() {
                     </div>
                     <div className="bg-blue-800/50 rounded p-2 border-l-4 border-yellow-400">
                       <p className="text-yellow-200 text-xs font-semibold mb-1">
-                        ⚠️ Look for a popup at the top of your browser
+                        Look for a popup at the top of your browser
                       </p>
                       <p className="text-blue-200 text-xs">
                         Your browser is asking for permission to access your location. Click <strong>"Allow"</strong> to continue.
@@ -1118,7 +1118,7 @@ function RecordActivity() {
 
               {isPaused && (
                 <div className="bg-gradient-to-r from-yellow-600 to-yellow-500 text-white px-4 py-3 rounded-xl font-bold shadow-lg">
-                  ⏸ PAUSED
+                  PAUSED
                 </div>
               )}
               
@@ -1183,10 +1183,10 @@ function RecordActivity() {
                 disabled={isRecording}
                 className="w-full px-4 py-3 bg-gray-800 border-2 border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition"
               >
-                <option value="running">🏃 Running</option>
-                <option value="cycling">🚴 Cycling</option>
-                <option value="walking">🚶 Walking</option>
-                <option value="hiking">⛰️ Hiking</option>
+                <option value="running">Running</option>
+                <option value="cycling">Cycling</option>
+                <option value="walking">Walking</option>
+                <option value="hiking">Hiking</option>
               </select>
             </div>
 
@@ -1324,7 +1324,7 @@ function RecordActivity() {
               <div className="bg-red-900/30 border border-red-600 rounded-xl p-3 text-xs text-red-200 backdrop-blur">
                 <AlertCircle className="h-4 w-4 inline mr-2" />
                 <div>
-                  <div className="font-bold mb-1">⚠️ Very Poor GPS Accuracy: {Math.round(gpsAccuracy)}m</div>
+                  <div className="font-bold mb-1">Very Poor GPS Accuracy: {Math.round(gpsAccuracy)}m</div>
                   <div>Using network positioning. For accurate tracking:</div>
                   <div className="mt-1 ml-4">
                     • Go outdoors with clear sky view<br/>
@@ -1344,7 +1344,7 @@ function RecordActivity() {
 
             {smoothedRoute.length > 0 && (
               <div className="bg-blue-900/30 border border-blue-600 rounded-xl p-3 text-xs text-blue-200 backdrop-blur">
-                <div className="font-semibold mb-1">✨ Route Optimized</div>
+                <div className="font-semibold mb-1">Route Optimized</div>
                 <div>
                   {route.length} points → {smoothedRoute.length} points
                   <span className="text-blue-300 ml-1">

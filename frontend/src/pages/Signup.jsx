@@ -69,7 +69,7 @@ function Signup() {
       };
       
       login(newUser);
-      console.log('✅ User created via', provider, ':', userId);
+      console.log('User created via', provider, ':', userId);
       navigate('/');
     } catch (err) {
       console.error('Social signup error:', err);
@@ -140,7 +140,7 @@ function Signup() {
         
         // Pass tokens to login function
         login(user, responseData.access_token, responseData.refresh_token);
-        console.log('✅ User created and logged in:', user.id, '(' + user.name + ')');
+        console.log('User created and logged in:', user.id, '(' + user.name + ')');
         navigate('/');
       }
     } catch (err) {
