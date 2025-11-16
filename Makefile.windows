@@ -2,12 +2,13 @@
 
 # Default target
 help:
-	@echo "Strava App - Docker Commands"
+	@echo "Strava App - Docker Commands (Windows)"
 	@echo ""
 	@echo "Setup & Run:"
 	@echo "  make build          - Build all Docker images (backend + frontend)"
 	@echo "  make rebuild        - Build without cache (use if changes not picked up)"
 	@echo "  make up             - Start all services"
+	@echo "  make up-d           - Start all services in background"
 	@echo "  make down           - Stop all services"
 	@echo "  make restart        - Restart all services"
 	@echo ""
@@ -33,7 +34,7 @@ help:
 	@echo "  make clean          - Stop services and remove volumes"
 	@echo "  make clean-all      - Remove everything including images"
 
-# Build the Docker images
+# Build the Docker images (Windows - no sudo needed)
 build:
 	docker compose build
 
@@ -69,26 +70,20 @@ logs-app:
 logs-frontend:
 	docker compose logs -f frontend
 
-# Check health
+# Check health (Windows PowerShell compatible)
 health:
 	@echo "Checking health endpoint..."
-	@curl -s http://localhost:8080/health/live | jq || curl -s http://localhost:8080/health/live
+	@powershell -Command "try { (Invoke-WebRequest -Uri http://localhost:8080/health/live -UseBasicParsing).Content } catch { Write-Host 'Health check failed' }"
 
-# Test recommendations
+# Test recommendations (Windows PowerShell compatible)
 recommend:
 	@echo "Testing recommendations for activity 1_1..."
-	@curl -s -X POST http://localhost:8080/recommend \
-		-H "Content-Type: application/json" \
-		-d '{"activity_id":"1_1","k":5}' | jq || \
-	curl -s -X POST http://localhost:8080/recommend \
-		-H "Content-Type: application/json" \
-		-d '{"activity_id":"1_1","k":5}'
+	@powershell -Command "Invoke-RestMethod -Uri http://localhost:8080/recommend -Method Post -ContentType 'application/json' -Body '{\"activity_id\":\"1_1\",\"k\":5}' | ConvertTo-Json"
 
-# Rebuild FAISS index
+# Rebuild FAISS index (Windows PowerShell compatible)
 rebuild-index:
 	@echo "Rebuilding FAISS index..."
-	@curl -s -X POST http://localhost:8080/recommend/rebuild | jq || \
-	curl -s -X POST http://localhost:8080/recommend/rebuild
+	@powershell -Command "Invoke-RestMethod -Uri http://localhost:8080/recommend/rebuild -Method Post | ConvertTo-Json"
 
 # Open shell in app container
 shell-app:
@@ -114,7 +109,7 @@ clean-all:
 start: build up-d
 	@echo ""
 	@echo "Services starting..."
-	@sleep 5
+	@timeout /t 5 /nobreak >nul 2>&1 || sleep 5
 	@echo ""
 	@echo "App:          http://localhost:8080"
 	@echo "API Docs:     http://localhost:8080/docs"
