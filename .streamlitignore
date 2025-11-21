@@ -1,0 +1,32 @@
+# Ignore sensitive files
+tokens.json
+env
+.env
+
+# Ignore Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Ignore notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Ignore documentation
+ANALYSIS_INDEX.md
+DATA_SCHEMA_ANALYSIS.md
+CODE_SNIPPETS_REFERENCE.md
+STREAMLIT_DATA_GUIDE.md
+CLAUDE.md
+
+# Ignore git
+.git/
+.gitignore
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore large data files (except required CSVs)
+# synthetic_strava_data.csv can be ignored if processed files exist
