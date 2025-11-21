@@ -1,10 +1,51 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+ENV/
+
+# Sensitive files - DO NOT COMMIT
+tokens.json
+env
 .env
+*.key
+*.pem
+credentials.json
 
 # OS
 .DS_Store
+Thumbs.db
+.Spotlight-V100
+.Trashes
 
 # Data
 data/raw_activities.csv
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Logs
+*.log
+logs/
+
+# Streamlit
+.streamlit/secrets.toml
