@@ -11,6 +11,7 @@ import folium
 from streamlit_folium import st_folium
 import os
 import json
+import polyline
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import MinMaxScaler
 from pathlib import Path
@@ -277,46 +278,194 @@ if len(top_recommendations) > 0:
         height=250
     )
 
-    # --- Map Visualization Placeholder ---
+    # --- Map Visualization with Real GPS Data ---
     st.markdown("---")
     st.subheader(f"🗺️ Route: {top_recommendations.iloc[0]['route_id']}")
 
-    # Since we don't have real GPS polylines, show a placeholder map
-    st.info("📍 Map visualization requires GPS polyline data. To enable this feature, add GPS coordinates to your route data.")
+    # Get the polyline for the top recommended route
+    top_route = top_recommendations.iloc[0]
 
-    # Create a simple map centered on a default location
-    default_location = [40.7128, -74.0060]  # New York City
-    m = folium.Map(
-        location=default_location,
-        zoom_start=12,
-        tiles="OpenStreetMap"
-    )
+    if 'gps_polyline' in top_route and pd.notna(top_route['gps_polyline']):
+        try:
+            # Decode the polyline
+            decoded_coordinates = polyline.decode(top_route['gps_polyline'])
 
-    # Add a marker for the route
-    folium.Marker(
-        default_location,
-        popup=f"Route: {top_recommendations.iloc[0]['route_id']}<br>Distance: {top_recommendations.iloc[0]['distance_km_route']:.1f} km",
-        tooltip=f"Distance: {top_recommendations.iloc[0]['distance_km_route']:.1f} km",
-        icon=folium.Icon(color='red', icon='info-sign')
-    ).add_to(m)
+            # Calculate map center
+            center_lat = np.mean([lat for lat, lon in decoded_coordinates])
+            center_lon = np.mean([lon for lat, lon in decoded_coordinates])
 
-    st_folium(m, height=400, width=None)
+            # Create map
+            m = folium.Map(
+                location=[center_lat, center_lon],
+                zoom_start=13,
+                tiles="OpenStreetMap"
+            )
+
+            # Add the route as a polyline
+            folium.PolyLine(
+                decoded_coordinates,
+                color='#FC4C02',  # Strava orange
+                weight=4,
+                opacity=0.8,
+                popup=f"{top_route['route_id']}: {top_route['distance_km_route']:.1f} km",
+                tooltip=f"Distance: {top_route['distance_km_route']:.1f} km, Elevation: {top_route['elevation_meters_route']:.0f} m"
+            ).add_to(m)
+
+            # Add start marker
+            folium.Marker(
+                decoded_coordinates[0],
+                popup=f"<b>Start</b><br>{top_route['route_id']}",
+                tooltip="Start",
+                icon=folium.Icon(color='green', icon='play', prefix='fa')
+            ).add_to(m)
+
+            # Add end marker
+            folium.Marker(
+                decoded_coordinates[-1],
+                popup=f"<b>End</b><br>{top_route['distance_km_route']:.1f} km",
+                tooltip="End",
+                icon=folium.Icon(color='red', icon='stop', prefix='fa')
+            ).add_to(m)
+
+            # Display the map
+            st_folium(m, height=450, width=None)
+
+            # Show route details
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Distance", f"{top_route['distance_km_route']:.1f} km")
+            with col2:
+                st.metric("Elevation Gain", f"{top_route['elevation_meters_route']:.0f} m")
+            with col3:
+                st.metric("Surface", top_route['surface_type_route'].title())
+
+        except Exception as e:
+            st.error(f"Error rendering map: {e}")
+            st.info("There was an issue decoding the GPS data for this route.")
+    else:
+        # Fallback if no GPS data
+        st.warning("📍 GPS data not available for this route. Showing approximate location.")
+
+        # Use start_lat/start_lon if available
+        if 'start_lat' in top_route and pd.notna(top_route['start_lat']):
+            location = [top_route['start_lat'], top_route['start_lon']]
+        else:
+            location = [40.7128, -74.0060]  # Default NYC
+
+        m = folium.Map(location=location, zoom_start=12, tiles="OpenStreetMap")
+        folium.Marker(
+            location,
+            popup=f"{top_route['route_id']}: {top_route['distance_km_route']:.1f} km",
+            icon=folium.Icon(color='orange', icon='info-sign')
+        ).add_to(m)
+
+        st_folium(m, height=400, width=None)
 
 else:
     st.warning("⚠️ No recommendations found matching your criteria. Try adjusting the filters.")
 
-# --- Stretch Goal Mock-up ---
+# --- Proximity Alerts ---
 st.markdown("---")
-with st.expander("🔔 Future Feature: Proximity Alerts"):
-    st.subheader("Proximity Alert Log (Demo)")
-    st.code(
-        """
-        [10:15 AM] ALERT: User 'jake_spence' finished a run 1.2 km from your location.
-        [08:45 AM] LOG: Webhook received. Activity created by user_runner.
-        [06:30 AM] ALERT: User 'anaisl' started an activity near your home at 6:25 AM!
-        """
-    )
-    st.caption("This feature requires a persistent Flask/FastAPI server with Strava Webhooks and real-time distance calculation (geopy).")
+st.subheader("🔔 Proximity Alerts")
+
+# Try to fetch real alerts from the proximity server
+try:
+    import requests
+    response = requests.get("http://localhost:5000/api/alerts?limit=10", timeout=2)
+
+    if response.status_code == 200:
+        data = response.json()
+        alerts = data.get('alerts', [])
+
+        if alerts:
+            st.success(f"✅ Live alerts from proximity server ({len(alerts)} recent)")
+
+            for alert in alerts:
+                alert_type = alert.get('type', 'info')
+                message = alert.get('message', '')
+
+                if alert_type == 'proximity_alert':
+                    st.warning(f"⚠️ {message}")
+                elif alert_type == 'webhook_log':
+                    st.info(f"📡 {message}")
+                else:
+                    st.text(message)
+
+            # Add simulate button
+            col1, col2 = st.columns([3, 1])
+            with col2:
+                if st.button("🧪 Simulate Activity"):
+                    try:
+                        sim_response = requests.post("http://localhost:5000/api/simulate", timeout=2)
+                        if sim_response.status_code == 200:
+                            st.success("Activity simulated! Refresh to see alert.")
+                            st.rerun()
+                    except:
+                        st.error("Could not simulate activity")
+
+        else:
+            st.info("No proximity alerts yet. Activities from friends within 5km will appear here.")
+
+            # Show how to start the server
+            with st.expander("ℹ️ How to enable proximity alerts"):
+                st.markdown("""
+                **Start the proximity alert server:**
+                ```bash
+                python proximity_alert_server.py
+                ```
+
+                The server will:
+                - Monitor Strava webhooks for new activities
+                - Calculate distances between users
+                - Generate alerts when friends are nearby (< 5km)
+                - Provide a REST API for this app to fetch alerts
+
+                **Test it:**
+                ```bash
+                curl -X POST http://localhost:5000/api/simulate
+                ```
+                """)
+
+    else:
+        raise Exception("Server not responding")
+
+except Exception as e:
+    # Fallback to demo mode if server not running
+    with st.expander("🔔 Proximity Alerts (Demo Mode - Server Offline)"):
+        st.warning("📡 Proximity alert server is not running. Showing demo data.")
+
+        st.code(
+            """
+[10:15 AM] ALERT: User 'Jake' finished a run 1.2 km from your location.
+[08:45 AM] LOG: Webhook received. Activity created by user_runner.
+[06:30 AM] ALERT: User 'Anais' started an activity near your home at 6:25 AM!
+            """,
+            language=None
+        )
+
+        st.markdown("""
+        **To enable real-time proximity alerts:**
+
+        1. Start the proximity alert server:
+           ```bash
+           python proximity_alert_server.py
+           ```
+
+        2. The server will run on `http://localhost:5000`
+
+        3. Test it:
+           ```bash
+           curl -X POST http://localhost:5000/api/simulate
+           ```
+
+        4. Refresh this page to see live alerts!
+
+        **Features:**
+        - Real-time Strava webhook monitoring
+        - Automatic distance calculation (geopy)
+        - Alert logging and history
+        - 5km proximity threshold
+        """)
 
 # --- Footer ---
 st.markdown("---")
