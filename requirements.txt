@@ -15,6 +15,9 @@ matplotlib>=3.7.0
 # GPS and Geographic
 polyline>=2.0.0
 geopy>=2.4.0
+osmnx>=2.0.0
+networkx>=3.0
+geopandas>=1.0.0
 
 # API and Authentication
 requests>=2.31.0
@@ -22,5 +25,4 @@ python-dotenv>=1.0.0
 flask>=3.0.0
 
 # Optional: For enhanced features
-# osmnx>=1.6.0
 # scikit-surprise>=1.1.3
